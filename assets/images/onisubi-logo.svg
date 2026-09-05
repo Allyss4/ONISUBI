@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 110" role="img" aria-labelledby="title desc">
+  <title id="title">ONISUBI logo</title>
+  <desc id="desc">Onigiri and ONISUBI wordmark</desc>
+  <path d="M28 39c3-16 16-29 30-29s28 13 31 29c3 14-4 23-31 23S25 53 28 39Z" fill="#fff" stroke="#000" stroke-width="3"/>
+  <path d="M48 36h20v25H48z" fill="#000"/>
+  <text x="91" y="43" font-family="Arial,sans-serif" font-size="31" font-weight="700" fill="#FF951C">NI</text>
+  <text x="26" y="82" font-family="Arial,sans-serif" font-size="31" font-weight="700" fill="#842F0A">SUBI</text>
+  <text x="29" y="100" font-family="Arial,sans-serif" font-size="9" font-style="italic" fill="#000">Two favorites in one bite...</text>
+</svg>
