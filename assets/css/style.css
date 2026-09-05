@@ -52,7 +52,9 @@ textarea:focus-visible {
 }
 
 button,
-input {
+input,
+textarea,
+select {
     font: inherit;
 }
 
@@ -1115,6 +1117,33 @@ input {
 .form-error {
     color: #a1261b;
     margin-bottom: 14px;
+    font-size: 0.9rem;
+}
+
+.field-hint {
+    font-size: 0.8rem;
+    margin-top: -8px;
+    color: var(--muted);
+    padding-left: 2px;
+}
+
+.field-hint.is-error {
+    color: #a1261b;
+}
+
+.field-hint.is-ok {
+    color: #2e7d32;
+}
+
+.checkout-form input.is-invalid,
+.checkout-form textarea.is-invalid {
+    border-color: #a1261b;
+    background: rgba(161, 38, 27, 0.04);
+}
+
+.checkout-form input.is-valid,
+.checkout-form textarea.is-valid {
+    border-color: #2e7d32;
 }
 
 .checkout-form input,
@@ -1125,6 +1154,7 @@ input {
     padding: 13px 14px;
     background: #fff;
     color: var(--dark);
+    transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .checkout-actions,

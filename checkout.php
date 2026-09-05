@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/config/bootstrap.php';
-$userId = require_login();
-$stmt = $conn->prepare('SELECT name,email,phone FROM users WHERE id=?');
+$userId = require_login('checkout.php', 'checkout_required');
+$stmt = $conn->prepare('SELECT name,email,phone,address FROM users WHERE id=?');
 $stmt->bind_param('i', $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();

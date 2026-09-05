@@ -1,5 +1,6 @@
 <?php
-require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/bootstrap.php';
+$isLoggedIn = current_user_id() !== null;
 
 $products = [];
 
@@ -47,7 +48,11 @@ if (empty($products)) {
             </nav>
 
             <div class="nav-actions">
-                <a class="account-link" href="auth.php">Account</a>
+                <?php if ($isLoggedIn): ?>
+                    <a class="account-link" href="account.php">My Account</a>
+                <?php else: ?>
+                    <button type="button" class="account-link" onclick="document.getElementById('login-prompt-modal').hidden = false;" style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
+                <?php endif; ?>
                 <button class="cart-pill">
                     Cart <span id="cart-count">0</span>
                 </button>
@@ -236,6 +241,57 @@ if (empty($products)) {
     <div id="cart-processing-popup" class="cart-popup" aria-live="polite">
         <strong>Order is now processing</strong>
         <span>Your ONISUBI order is being prepared.</span>
+    </div>
+
+    <!-- Login/Register Modal -->
+    <div id="login-prompt-modal" class="modal-backdrop" hidden>
+        <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="login-prompt-title" style="max-height: 90vh; overflow-y: auto;">
+            <button class="modal-close" type="button" onclick="document.getElementById('login-prompt-modal').hidden = true;" aria-label="Close">&times;</button>
+            <span class="eyebrow">Welcome</span>
+            <h2 id="login-prompt-title">Enter your email to continue</h2>
+            
+            <form class="checkout-form magic-auth-form" method="post" action="auth.php" style="margin-top: 16px;">
+                <!-- Step 1 -->
+                <div class="auth-step-1">
+                    <input type="email" name="email_check" class="auth-email-input" placeholder="Email address" required style="margin-bottom: 16px;">
+                    <button type="button" class="btn btn-primary auth-continue-btn" style="width: 100%;">Continue</button>
+                </div>
+
+                <!-- Step 2 (Login) -->
+                <div class="auth-step-login" hidden>
+                    <input type="hidden" name="action" value="login" disabled>
+                    <input type="hidden" name="redirect" value="index.php">
+                    <input type="hidden" name="email" class="auth-email-hidden" disabled>
+                    
+                    <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                        <strong class="auth-email-display"></strong>
+                        <button type="button" class="text-link auth-back-btn" style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
+                    </div>
+                    
+                    <input type="password" name="password" placeholder="Password" required disabled>
+                    <button class="btn btn-primary" type="submit" style="width: 100%;">Log in</button>
+                    <p style="margin-top: 16px; text-align: center;"><a class="text-link" href="reset-password.php">Forgot or reset password?</a></p>
+                </div>
+
+                <!-- Step 2 (Register) -->
+                <div class="auth-step-register" hidden>
+                    <input type="hidden" name="action" value="register" disabled>
+                    <input type="hidden" name="redirect" value="index.php">
+                    <input type="hidden" name="email" class="auth-email-hidden" disabled>
+                    
+                    <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                        <strong class="auth-email-display"></strong>
+                        <button type="button" class="text-link auth-back-btn" style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
+                    </div>
+                    
+                    <input type="text" name="name" placeholder="Full name" required disabled>
+                    <input type="tel" name="phone" placeholder="Phone number" required disabled>
+                    <textarea name="address" rows="2" placeholder="Delivery address" required disabled></textarea>
+                    <input type="password" name="password" minlength="8" placeholder="Password (8+ characters)" required disabled>
+                    <button class="btn btn-primary" type="submit" style="width: 100%;">Create account</button>
+                </div>
+            </form>
+        </section>
     </div>
 
     <script src="assets/js/script.js"></script>

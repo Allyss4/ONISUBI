@@ -20,7 +20,18 @@ function json_response(array $data, int $status = 200): never {
     exit;
 }
 function current_user_id(): ?int { return isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null; }
-function require_login(): int { $id = current_user_id(); if (!$id) { header('Location: account.php'); exit; } return $id; }
+function require_login(string $redirect = 'account.php', string $message = ''): int {
+    $id = current_user_id(); 
+    if (!$id) { 
+        $url = 'auth.php?redirect=' . urlencode($redirect);
+        if ($message !== '') {
+            $url .= '&msg=' . urlencode($message);
+        }
+        header('Location: ' . $url); 
+        exit; 
+    } 
+    return $id; 
+}
 function cart_from_request(): array {
     $items = json_decode((string) ($_POST['cart'] ?? '[]'), true);
     return is_array($items) ? $items : [];
