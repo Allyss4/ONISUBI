@@ -330,174 +330,221 @@ if (orderStatus) {
     }
 }
 
-// ── Validation helpers ──────────────────────────────────────────────────────
 function setFieldState(input, state, message) {
-    // state: 'error' | 'ok' | 'idle'
-    input.classList.remove('is-invalid', 'is-valid');
-    let hint = input.nextElementSibling;
-    if (!hint || !hint.classList.contains('field-hint')) {
-        hint = document.createElement('p');
-        hint.className = 'field-hint';
-        input.parentNode.insertBefore(hint, input.nextSibling);
-    }
-    hint.classList.remove('is-error', 'is-ok');
+  input.classList.remove("is-invalid", "is-valid");
+  let hint = input.nextElementSibling;
+  if (!hint || !hint.classList.contains("field-hint")) {
+    hint = document.createElement("p");
+    hint.className = "field-hint";
+    input.parentNode.insertBefore(hint, input.nextSibling);
+  }
+  hint.classList.remove("is-error", "is-ok");
 
-    if (state === 'error') {
-        input.classList.add('is-invalid');
-        hint.classList.add('is-error');
-        hint.textContent = message;
-    } else if (state === 'ok') {
-        input.classList.add('is-valid');
-        hint.classList.add('is-ok');
-        hint.textContent = message || '✓ Looks good';
-    } else {
-        hint.textContent = message || '';
-    }
+  if (state === "error") {
+    input.classList.add("is-invalid");
+    hint.classList.add("is-error");
+    hint.textContent = message;
+  } else if (state === "ok") {
+    input.classList.add("is-valid");
+    hint.classList.add("is-ok");
+    hint.textContent = message || "✓ Looks good";
+  } else {
+    hint.textContent = message || "";
+  }
 }
 
 function validatePhone(input) {
-    const raw = input.value.trim().replace(/[\s\-().]/g, '');
-    if (!raw) { setFieldState(input, 'error', 'Phone number is required.'); return false; }
-    // Accept: 09XXXXXXXXX, +639XXXXXXXXX, or 9XXXXXXXXX (all PH formats)
-    const ph = /^(\+?63|0)9\d{9}$/.test(raw);
-    if (!ph) { setFieldState(input, 'error', 'Enter a valid Philippine number (e.g. 09XX XXX XXXX).'); return false; }
-    setFieldState(input, 'ok');
-    return true;
+  const raw = input.value.trim().replace(/[\s\-().]/g, "");
+  if (!raw) {
+    setFieldState(input, "error", "Phone number is required.");
+    return false;
+  }
+  const ph = /^(\+?63|0)9\d{9}$/.test(raw);
+  if (!ph) {
+    setFieldState(
+      input,
+      "error",
+      "Enter a valid Philippine number (e.g. 09XX XXX XXXX).",
+    );
+    return false;
+  }
+  setFieldState(input, "ok");
+  return true;
 }
 
 function validatePassword(input, minLen = 8) {
-    const val = input.value;
-    if (!val) { setFieldState(input, 'error', 'Password is required.'); return false; }
-    if (val.length < minLen) { setFieldState(input, 'error', `Password must be at least ${minLen} characters.`); return false; }
-    const strength = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter(r => r.test(val)).length;
-    if (strength < 2) { setFieldState(input, 'error', 'Add a mix of letters and numbers for a stronger password.'); return false; }
-    setFieldState(input, 'ok');
-    return true;
+  const val = input.value;
+  if (!val) {
+    setFieldState(input, "error", "Password is required.");
+    return false;
+  }
+  if (val.length < minLen) {
+    setFieldState(
+      input,
+      "error",
+      `Password must be at least ${minLen} characters.`,
+    );
+    return false;
+  }
+  const strength = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) =>
+    r.test(val),
+  ).length;
+  if (strength < 2) {
+    setFieldState(
+      input,
+      "error",
+      "Add a mix of letters and numbers for a stronger password.",
+    );
+    return false;
+  }
+  setFieldState(input, "ok");
+  return true;
 }
 
-// ── Magic Auth flow ──────────────────────────────────────────────────────────
 function initMagicAuth() {
-    document.querySelectorAll('.magic-auth-form').forEach(form => {
-        if (form.dataset.initialized) return;
-        form.dataset.initialized = 'true';
+  document.querySelectorAll(".magic-auth-form").forEach((form) => {
+    if (form.dataset.initialized) return;
+    form.dataset.initialized = "true";
 
-        const step1 = form.querySelector('.auth-step-1');
-        const stepLogin = form.querySelector('.auth-step-login');
-        const stepRegister = form.querySelector('.auth-step-register');
-        
-        const emailInput = form.querySelector('.auth-email-input');
-        const continueBtn = form.querySelector('.auth-continue-btn');
-        const backBtns = form.querySelectorAll('.auth-back-btn');
-        
-        const emailDisplays = form.querySelectorAll('.auth-email-display');
-        const emailHiddens = form.querySelectorAll('.auth-email-hidden');
+    const step1 = form.querySelector(".auth-step-1");
+    const stepLogin = form.querySelector(".auth-step-login");
+    const stepRegister = form.querySelector(".auth-step-register");
 
-        // ── Register field validation ──────────────────────────────────────
-        if (stepRegister) {
-            const phoneInput = stepRegister.querySelector('input[name="phone"]');
-            const passInput  = stepRegister.querySelector('input[name="password"]');
+    const emailInput = form.querySelector(".auth-email-input");
+    const continueBtn = form.querySelector(".auth-continue-btn");
+    const backBtns = form.querySelectorAll(".auth-back-btn");
 
-            if (phoneInput) {
-                phoneInput.addEventListener('blur', () => validatePhone(phoneInput));
-                phoneInput.addEventListener('input', () => {
-                    if (phoneInput.classList.contains('is-invalid')) validatePhone(phoneInput);
-                });
-            }
+    const emailDisplays = form.querySelectorAll(".auth-email-display");
+    const emailHiddens = form.querySelectorAll(".auth-email-hidden");
 
-            if (passInput) {
-                passInput.addEventListener('input', () => validatePassword(passInput));
-                passInput.addEventListener('blur',  () => validatePassword(passInput));
-            }
+    if (stepRegister) {
+      const phoneInput = stepRegister.querySelector('input[name="phone"]');
+      const passInput = stepRegister.querySelector('input[name="password"]');
 
-            // Intercept submit on register step
-            const registerSubmit = stepRegister.querySelector('button[type="submit"]');
-            if (registerSubmit) {
-                registerSubmit.addEventListener('click', (e) => {
-                    let ok = true;
-                    if (phoneInput && !validatePhone(phoneInput)) ok = false;
-                    if (passInput  && !validatePassword(passInput))  ok = false;
-                    if (!ok) e.preventDefault();
-                });
-            }
-        }
-
-        // ── Login field validation ─────────────────────────────────────────
-        if (stepLogin) {
-            const passInput = stepLogin.querySelector('input[name="password"]');
-            if (passInput) {
-                passInput.addEventListener('blur', () => {
-                    if (!passInput.value) setFieldState(passInput, 'error', 'Password is required.');
-                    else setFieldState(passInput, 'idle');
-                });
-            }
-
-            const loginSubmit = stepLogin.querySelector('button[type="submit"]');
-            if (loginSubmit) {
-                loginSubmit.addEventListener('click', (e) => {
-                    if (passInput && !passInput.value) {
-                        setFieldState(passInput, 'error', 'Password is required.');
-                        e.preventDefault();
-                    }
-                });
-            }
-        }
-
-        // ── Email check ────────────────────────────────────────────────────
-        async function checkEmail() {
-            if (!emailInput.reportValidity()) return;
-            const email = emailInput.value.trim();
-            if (!email) return;
-
-            continueBtn.disabled = true;
-            continueBtn.textContent = 'Checking...';
-
-            try {
-                const res = await fetch(`api-check-email.php?email=${encodeURIComponent(email)}`);
-                const data = await res.json();
-                
-                step1.hidden = true;
-                
-                emailDisplays.forEach(el => el.textContent = email);
-                emailHiddens.forEach(el => { el.value = email; el.disabled = false; });
-                
-                if (data.exists) {
-                    stepLogin.hidden = false;
-                    stepLogin.querySelectorAll('input, button, textarea').forEach(el => el.disabled = false);
-                    stepLogin.querySelector('input[name="action"]').disabled = false;
-                } else {
-                    stepRegister.hidden = false;
-                    stepRegister.querySelectorAll('input, button, textarea').forEach(el => el.disabled = false);
-                    stepRegister.querySelector('input[name="action"]').disabled = false;
-                }
-            } catch (err) {
-                alert('Something went wrong. Please try again.');
-            } finally {
-                continueBtn.disabled = false;
-                continueBtn.textContent = 'Continue';
-            }
-        }
-
-        if(continueBtn && emailInput) {
-            continueBtn.addEventListener('click', checkEmail);
-            emailInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); checkEmail(); }
-            });
-        }
-
-        backBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                if(stepLogin) stepLogin.hidden = true;
-                if(stepRegister) stepRegister.hidden = true;
-                if(step1) step1.hidden = false;
-                
-                if(stepLogin) stepLogin.querySelectorAll('input:not([type="hidden"]), button, textarea').forEach(el => el.disabled = true);
-                if(stepRegister) stepRegister.querySelectorAll('input:not([type="hidden"]), button, textarea').forEach(el => el.disabled = true);
-                if(stepLogin) { const a = stepLogin.querySelector('input[name="action"]'); if(a) a.disabled = true; }
-                if(stepRegister) { const a = stepRegister.querySelector('input[name="action"]'); if(a) a.disabled = true; }
-            });
+      if (phoneInput) {
+        phoneInput.addEventListener("blur", () => validatePhone(phoneInput));
+        phoneInput.addEventListener("input", () => {
+          if (phoneInput.classList.contains("is-invalid"))
+            validatePhone(phoneInput);
         });
+      }
+
+      if (passInput) {
+        passInput.addEventListener("input", () => validatePassword(passInput));
+        passInput.addEventListener("blur", () => validatePassword(passInput));
+      }
+
+      const registerSubmit = stepRegister.querySelector(
+        'button[type="submit"]',
+      );
+      if (registerSubmit) {
+        registerSubmit.addEventListener("click", (e) => {
+          let ok = true;
+          if (phoneInput && !validatePhone(phoneInput)) ok = false;
+          if (passInput && !validatePassword(passInput)) ok = false;
+          if (!ok) e.preventDefault();
+        });
+      }
+    }
+    if (stepLogin) {
+      const passInput = stepLogin.querySelector('input[name="password"]');
+      if (passInput) {
+        passInput.addEventListener("blur", () => {
+          if (!passInput.value)
+            setFieldState(passInput, "error", "Password is required.");
+          else setFieldState(passInput, "idle");
+        });
+      }
+
+      const loginSubmit = stepLogin.querySelector('button[type="submit"]');
+      if (loginSubmit) {
+        loginSubmit.addEventListener("click", (e) => {
+          if (passInput && !passInput.value) {
+            setFieldState(passInput, "error", "Password is required.");
+            e.preventDefault();
+          }
+        });
+      }
+    }
+
+    async function checkEmail() {
+      if (!emailInput.reportValidity()) return;
+      const email = emailInput.value.trim();
+      if (!email) return;
+
+      continueBtn.disabled = true;
+      continueBtn.textContent = "Checking...";
+
+      try {
+        const res = await fetch(
+          `api-check-email.php?email=${encodeURIComponent(email)}`,
+        );
+        const data = await res.json();
+
+        step1.hidden = true;
+
+        emailDisplays.forEach((el) => (el.textContent = email));
+        emailHiddens.forEach((el) => {
+          el.value = email;
+          el.disabled = false;
+        });
+
+        if (data.exists) {
+          stepLogin.hidden = false;
+          stepLogin
+            .querySelectorAll("input, button, textarea")
+            .forEach((el) => (el.disabled = false));
+          stepLogin.querySelector('input[name="action"]').disabled = false;
+        } else {
+          stepRegister.hidden = false;
+          stepRegister
+            .querySelectorAll("input, button, textarea")
+            .forEach((el) => (el.disabled = false));
+          stepRegister.querySelector('input[name="action"]').disabled = false;
+        }
+      } catch (err) {
+        alert("Something went wrong. Please try again.");
+      } finally {
+        continueBtn.disabled = false;
+        continueBtn.textContent = "Continue";
+      }
+    }
+
+    if (continueBtn && emailInput) {
+      continueBtn.addEventListener("click", checkEmail);
+      emailInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          checkEmail();
+        }
+      });
+    }
+
+    backBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (stepLogin) stepLogin.hidden = true;
+        if (stepRegister) stepRegister.hidden = true;
+        if (step1) step1.hidden = false;
+
+        if (stepLogin)
+          stepLogin
+            .querySelectorAll('input:not([type="hidden"]), button, textarea')
+            .forEach((el) => (el.disabled = true));
+        if (stepRegister)
+          stepRegister
+            .querySelectorAll('input:not([type="hidden"]), button, textarea')
+            .forEach((el) => (el.disabled = true));
+        if (stepLogin) {
+          const a = stepLogin.querySelector('input[name="action"]');
+          if (a) a.disabled = true;
+        }
+        if (stepRegister) {
+          const a = stepRegister.querySelector('input[name="action"]');
+          if (a) a.disabled = true;
+        }
+      });
     });
+  });
 }
-document.addEventListener('DOMContentLoaded', initMagicAuth);
-// Also run immediately in case DOM is already loaded
+document.addEventListener("DOMContentLoaded", initMagicAuth);
 initMagicAuth();

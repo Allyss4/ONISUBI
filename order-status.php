@@ -55,11 +55,6 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
     <header class="site-header">
         <div class="container nav-wrap">
             <a class="brand" href="index.php" aria-label="Go to ONISUBI home"><img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo"><span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span></a>
-            <nav class="main-nav" aria-label="Main navigation">
-                <a href="index.php">Home</a>
-                <a href="cart.php">Cart</a>
-                <a href="checkout.php">Checkout</a>
-            </nav>
             <div class="nav-actions">
                 <button class="cart-pill">Cart <span id="cart-count">0</span></button>
             </div>
