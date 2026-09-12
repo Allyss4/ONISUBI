@@ -1,60 +1,78 @@
 <?php
 
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "onisubi";
+$host     = "db.ghrexntoqduadflakijc.supabase.co";
+$username = "postgres";
+$password = "wFqNd8dyxWCeUHrZ";
+$database = "postgres"; // Supabase default database is 'postgres'
+$port     = "5432";
 
-$conn = new mysqli($host, $username, $password, $database);
-
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
+try {
+    $dsn = "pgsql:host=$host;port=$port;dbname=$database";
+    $conn = new PDO($dsn, $username, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+    ]);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
 }
 
-$tableCheck = $conn->query("SHOW TABLES LIKE 'users'");
-if ($tableCheck && $tableCheck->num_rows > 0) {
-    $phoneCheck = $conn->query("SHOW COLUMNS FROM users LIKE 'phone'");
-    if ($phoneCheck && $phoneCheck->num_rows === 0) {
-        $conn->query("ALTER TABLE users ADD COLUMN phone VARCHAR(40) NULL AFTER email");
+// Helper function to check if a table exists in PostgreSQL
+function tableExists($conn, $tableName) {
+    $stmt = $conn->prepare("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = :table");
+    $stmt->execute(['table' => strtolower($tableName)]);
+    return (bool)$stmt->fetchColumn();
+}
+
+// Helper function to check if a column exists in PostgreSQL
+function columnExists($conn, $tableName, $columnName) {
+    $stmt = $conn->prepare("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = :table AND column_name = :column");
+    $stmt->execute(['table' => strtolower($tableName), 'column' => strtolower($columnName)]);
+    return (bool)$stmt->fetchColumn();
+}
+
+// --- USERS TABLE SETUP ---
+if (tableExists($conn, 'users')) {
+    if (!columnExists($conn, 'users', 'phone')) {
+        $conn->exec("ALTER TABLE users ADD COLUMN phone VARCHAR(40) NULL");
     }
 
-    $addressCheck = $conn->query("SHOW COLUMNS FROM users LIKE 'address'");
-    if ($addressCheck && $addressCheck->num_rows === 0) {
-        if ($phoneCheck && $phoneCheck->num_rows > 0) {
-            $conn->query("ALTER TABLE users ADD COLUMN address TEXT NULL AFTER phone");
-        } else {
-            $conn->query("ALTER TABLE users ADD COLUMN address TEXT NULL AFTER email");
-        }
+    if (!columnExists($conn, 'users', 'address')) {
+        $conn->exec("ALTER TABLE users ADD COLUMN address TEXT NULL");
     }
 
-    $passwordHashCheck = $conn->query("SHOW COLUMNS FROM users LIKE 'password_hash'");
-    if ($passwordHashCheck && $passwordHashCheck->num_rows === 0) {
-        $conn->query("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL AFTER email");
+    if (!columnExists($conn, 'users', 'password_hash')) {
+        $conn->exec("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL");
     }
 
-    $demoUserExists = $conn->query("SELECT id FROM users WHERE name = 'zleaxy' OR email = 'zleaxy' LIMIT 1");
-    if ($demoUserExists && $demoUserExists->num_rows === 0) {
+    // Check and seed demo user
+    $stmt = $conn->prepare("SELECT id FROM users WHERE name = :name OR email = :email LIMIT 1");
+    $stmt->execute(['name' => 'zleaxy', 'email' => 'zleaxy']);
+    if (!$stmt->fetch()) {
         $hash = password_hash('zleaxy156', PASSWORD_DEFAULT);
-        $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, password, phone, address, role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())');
-        $phone = '09123456789';
-        $address = 'ONISUBI Demo Address';
-        $role = 'customer';
-        $stmt->bind_param('sssssss', 'zleaxy', 'zleaxy', $hash, $hash, $phone, $address, $role);
-        $stmt->execute();
+        
+        // Note: Make sure your users table has a 'password' column if including it in INSERT
+        $insertUser = $conn->prepare("INSERT INTO users (name, email, password_hash, phone, address, role, created_at) VALUES (:name, :email, :hash, :phone, :address, :role, CURRENT_TIMESTAMP)");
+        $insertUser->execute([
+            'name'     => 'zleaxy',
+            'email'    => 'zleaxy',
+            'hash'     => $hash,
+            'phone'    => '09123456789',
+            'address'  => 'ONISUBI Demo Address',
+            'role'     => 'customer'
+        ]);
     }
 }
 
-$tableCheck = $conn->query("SHOW TABLES LIKE 'orders'");
-if ($tableCheck && $tableCheck->num_rows > 0) {
-    $statusCheck = $conn->query("SHOW COLUMNS FROM orders LIKE 'status'");
-    if ($statusCheck && $statusCheck->num_rows > 0) {
-        $conn->query("UPDATE orders SET status='Order Placed' WHERE status IS NULL OR status='' OR status='Awaiting payment'");
-        $conn->query("ALTER TABLE orders MODIFY status VARCHAR(40) NOT NULL DEFAULT 'Order Placed'");
+// --- ORDERS TABLE SETUP ---
+if (tableExists($conn, 'orders')) {
+    if (columnExists($conn, 'orders', 'status')) {
+        $conn->exec("UPDATE orders SET status = 'Order Placed' WHERE status IS NULL OR status = '' OR status = 'Awaiting payment'");
+        $conn->exec("ALTER TABLE orders ALTER COLUMN status SET DATA TYPE VARCHAR(40), ALTER COLUMN status SET DEFAULT 'Order Placed', ALTER COLUMN status SET NOT NULL");
     }
 }
 
-$productTableCheck = $conn->query("SHOW TABLES LIKE 'Products'");
-if ($productTableCheck && $productTableCheck->num_rows > 0) {
+// --- PRODUCTS & INVENTORY SETUP ---
+if (tableExists($conn, 'products')) {
     $products = [
         ['Spam & Egg', 'Main flavor with savory spam and fluffy egg.', '40.00', 'https://balancewithjess.com/wp-content/uploads/2022/02/Spam-Musubi-with-Egg-Feat-500x500.jpg', 20, 'active'],
         ['Hotdog', 'A tasty hotdog-filled bite with rich, smoky flavor.', '40.00', 'https://www.sbfoods-worldwide.com/recipes/rst0f40000000t14-img/416_UMAMI_TOPPING_Onigiri_ichiran.jpg', 18, 'active'],
@@ -62,49 +80,57 @@ if ($productTableCheck && $productTableCheck->num_rows > 0) {
         ['Egg', 'Simple, comforting, and filling egg musubi favorite.', '40.00', 'https://japanesecooking101.com/wp-content/uploads/2023/10/IMG_6350.jpeg', 15, 'active']
     ];
 
-    $existingProducts = $conn->query('SELECT id, name FROM Products');
+    $existingProducts = $conn->query("SELECT id, name FROM products")->fetchAll();
     $existingNames = [];
-    while ($row = $existingProducts->fetch_assoc()) {
-        $existingNames[strtolower($row['name'])] = (int) $row['id'];
+    foreach ($existingProducts as $row) {
+        $existingNames[strtolower($row['name'])] = (int)$row['id'];
     }
 
-    $insertProductStmt = $conn->prepare('INSERT INTO Products (name, description, price, image, stock, status) VALUES (?, ?, ?, ?, ?, ?)');
+    $insertProductStmt = $conn->prepare("INSERT INTO products (name, description, price, image, stock, status) VALUES (:name, :desc, :price, :image, :stock, :status)");
+
     foreach ($products as $product) {
         $name = $product[0];
         if (isset($existingNames[strtolower($name)])) {
             continue;
         }
-        $description = $product[1];
-        $price = $product[2];
-        $image = $product[3];
-        $stock = (int) $product[4];
-        $status = $product[5];
-        $insertProductStmt->bind_param('ssdsis', $name, $description, $price, $image, $stock, $status);
-        $insertProductStmt->execute();
+
+        $insertProductStmt->execute([
+            'name'   => $name,
+            'desc'   => $product[1],
+            'price'  => $product[2],
+            'image'  => $product[3],
+            'stock'  => (int)$product[4],
+            'status' => $product[5]
+        ]);
     }
 
-    $inventoryTableCheck = $conn->query("SHOW TABLES LIKE 'inventory'");
-    if ($inventoryTableCheck && $inventoryTableCheck->num_rows > 0) {
-        $productStmt = $conn->prepare('SELECT id, stock FROM Products WHERE name = ? LIMIT 1');
-        $inventoryExistsStmt = $conn->prepare('SELECT id FROM inventory WHERE product_id = ? LIMIT 1');
-        $insertInventoryStmt = $conn->prepare('INSERT INTO inventory (product_id, quantity, low_stock_limit, updated_at) VALUES (?, ?, ?, NOW())');
+    // --- INVENTORY SETUP ---
+    if (tableExists($conn, 'inventory')) {
+        $productStmt = $conn->prepare("SELECT id, stock FROM products WHERE name = :name LIMIT 1");
+        $inventoryExistsStmt = $conn->prepare("SELECT id FROM inventory WHERE product_id = :product_id LIMIT 1");
+        $insertInventoryStmt = $conn->prepare("INSERT INTO inventory (product_id, quantity, low_stock_limit, updated_at) VALUES (:product_id, :quantity, :low_stock_limit, CURRENT_TIMESTAMP)");
+
         foreach ($products as $product) {
             $name = $product[0];
-            $productStmt->bind_param('s', $name);
-            $productStmt->execute();
-            $productRow = $productStmt->get_result()->fetch_assoc();
+            $productStmt->execute(['name' => $name]);
+            $productRow = $productStmt->fetch();
+
             if (!$productRow) {
                 continue;
             }
-            $productId = (int) $productRow['id'];
-            $inventoryExistsStmt->bind_param('i', $productId);
-            $inventoryExistsStmt->execute();
-            $inventoryExistsStmt->store_result();
-            if ($inventoryExistsStmt->num_rows === 0) {
-                $quantity = (int) $productRow['stock'];
+
+            $productId = (int)$productRow['id'];
+            $inventoryExistsStmt->execute(['product_id' => $productId]);
+
+            if (!$inventoryExistsStmt->fetch()) {
+                $quantity = (int)$productRow['stock'];
                 $lowStockLimit = 5;
-                $insertInventoryStmt->bind_param('iii', $productId, $quantity, $lowStockLimit);
-                $insertInventoryStmt->execute();
+
+                $insertInventoryStmt->execute([
+                    'product_id'      => $productId,
+                    'quantity'        => $quantity,
+                    'low_stock_limit' => $lowStockLimit
+                ]);
             }
         }
     }
