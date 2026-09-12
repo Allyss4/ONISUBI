@@ -65,6 +65,16 @@ if ($currentIndex === false) {
         <img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo">
         <span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span>
       </a>
+      <nav class="main-nav" id="main-nav" aria-label="Main navigation">
+        <a href="index.php">Home</a>
+        <a href="index.php#menu">Menu</a>
+        <a href="settings.php">Settings</a>
+        <?php if ($userId): ?>
+          <a href="auth.php?action=logout" class="mobile-only-link">Log Out</a>
+        <?php else: ?>
+          <a href="#" class="mobile-only-link" onclick="document.getElementById('login-prompt-modal').hidden = false; return false;">Log In</a>
+        <?php endif; ?>
+      </nav>
       <div class="nav-actions">
         <button class="cart-pill">Cart <span id="cart-count">0</span></button>
         <?php if ($userId): ?>
@@ -73,8 +83,14 @@ if ($currentIndex === false) {
           <button type="button" class="account-link" onclick="document.getElementById('login-prompt-modal').hidden = false;"
             style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
         <?php endif; ?>
+        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="main-nav">
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+        </button>
       </div>
     </div>
+    <div class="nav-overlay" id="nav-overlay"></div>
   </header>
 
   <main class="cart-page">
