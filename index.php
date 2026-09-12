@@ -182,17 +182,14 @@ if (empty($products)) {
 
         <div class="feature-grid">
           <div class="feature-item">
-            <div class="feature-icon">🥢</div>
             <h3>Traditional taste</h3>
             <p>Inspired by Japanese onigiri and Hawaiian musubi favorites.</p>
           </div>
           <div class="feature-item">
-            <div class="feature-icon">💸</div>
             <h3>Affordable price</h3>
             <p>Each piece is only ₱40.00, making it easy to grab anytime.</p>
           </div>
           <div class="feature-item">
-            <div class="feature-icon">⚡</div>
             <h3>Fast and filling</h3>
             <p>Perfect for busy school days, breaks, and quick meals.</p>
           </div>
