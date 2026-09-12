@@ -1,10 +1,10 @@
 <?php
 
-$host     = "db.ghrexntoqduadflakijc.supabase.co";
-$username = "postgres";
+$host = "aws-0-ap-southeast-1.pooler.supabase.com";
+$username = "postgres.ghrexntoqduadflakijc";
 $password = "wFqNd8dyxWCeUHrZ";
 $database = "postgres";
-$port     = "5432";
+$port = "6543";
 
 try {
   $dsn = "pgsql:host=$host;port=$port;dbname=$database;sslmode=require";
