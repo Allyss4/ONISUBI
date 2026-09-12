@@ -68,12 +68,18 @@ try {
     }
 
     $status = 'Order Placed';
+
+  // Updated INSERT statement including required customer_name, phone, address, and notes fields
   $orderStmt = $conn->prepare('
-        INSERT INTO orders (user_id, total, status, payment_method, order_date) 
-        VALUES (:user_id, :total, :status, :payment_method, CURRENT_TIMESTAMP)
+        INSERT INTO orders (user_id, customer_name, phone, address, notes, total, status, payment_method, order_date) 
+        VALUES (:user_id, :customer_name, :phone, :address, :notes, :total, :status, :payment_method, CURRENT_TIMESTAMP)
     ');
   $orderStmt->execute([
     ':user_id' => $userId,
+    ':customer_name' => $name,
+    ':phone' => $phone,
+    ':address' => $address,
+    ':notes' => $notes ?: null,
     ':total' => $total,
     ':status' => $status,
     ':payment_method' => $paymentMethod,
@@ -81,14 +87,16 @@ try {
 
   $orderId = (int) $conn->lastInsertId();
 
+  // Updated INSERT statement including required product_name field
     foreach ($verified as $item) {
     $itemStmt = $conn->prepare('
-            INSERT INTO order_items (order_id, product_id, quantity, price) 
-            VALUES (:order_id, :product_id, :quantity, :price)
+            INSERT INTO order_items (order_id, product_id, product_name, quantity, price) 
+            VALUES (:order_id, :product_id, :product_name, :quantity, :price)
         ');
     $itemStmt->execute([
       ':order_id' => $orderId,
       ':product_id' => $item['id'],
+      ':product_name' => $item['name'],
       ':quantity' => $item['quantity'],
       ':price' => $item['price'],
     ]);
@@ -129,14 +137,19 @@ try {
         ];
     }
 
-    $referenceNumber = 'ONISUBI-' . $orderId;
+  // Dynamic base URL detection for PayMongo redirect support across local and cloud environments
+  $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+  $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+  $baseUrl = $scheme . '://' . $host;
+
+  $referenceNumber = 'ONISUBI-' . $orderId;
     $payload = [
         'data' => [
             'attributes' => [
                 'line_items' => $lineItems,
                 'payment_method_types' => ['gcash', 'qrph', 'paymaya', 'grab_pay', 'card', 'dob'],
-                'success_url' => 'http://localhost/ONISUBI/order-status.php?id=' . $orderId . '&payment=success',
-                'cancel_url' => 'http://localhost/ONISUBI/checkout.php?payment=cancelled',
+        'success_url' => $baseUrl . '/order-status.php?id=' . $orderId . '&payment=success',
+        'cancel_url' => $baseUrl . '/checkout.php?payment=cancelled',
                 'reference_number' => $referenceNumber,
                 'metadata' => [
                     'order_id' => (string) $orderId,
