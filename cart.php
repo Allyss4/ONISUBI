@@ -1,10 +1,12 @@
 <?php
+declare(strict_types=1);
 require_once __DIR__ . '/config/bootstrap.php';
+
 $isLoggedIn = current_user_id() !== null;
 $cartItems = json_decode($_COOKIE['onisubi_cart'] ?? '[]', true);
 $cartItems = is_array($cartItems) ? $cartItems : [];
 
-$total = 0;
+$total = 0.0;
 foreach ($cartItems as $item) {
   $total += (float) ($item['price'] ?? 0) * (int) ($item['qty'] ?? 1);
 }
@@ -25,9 +27,10 @@ foreach ($cartItems as $item) {
 <body>
   <header class="site-header">
     <div class="container nav-wrap">
-      <a class="brand" href="index.php" aria-label="Go to ONISUBI home"><img class="brand-logo-image"
-          src="assets/images/onisubi-logo.svg" alt="ONISUBI logo"><span class="brand-wordmark"><span
-            class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span></a>
+      <a class="brand" href="index.php" aria-label="Go to ONISUBI home">
+        <img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo">
+        <span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span>
+      </a>
       <div class="nav-actions">
         <button class="cart-pill">
           Cart <span id="cart-count">0</span>
@@ -38,9 +41,9 @@ foreach ($cartItems as $item) {
           <button type="button" class="account-link" onclick="document.getElementById('login-prompt-modal').hidden = false;"
             style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
         <?php endif; ?>
-        </div>
-        </div>
-        </header>
+      </div>
+      </div>
+      </header>
 
   <main class="cart-page">
     <div class="container cart-layout">
@@ -63,25 +66,28 @@ foreach ($cartItems as $item) {
             <?php else: ?>
               <?php foreach ($cartItems as $index => $item): ?>
                 <tr>
-                  <td><?= htmlspecialchars($item['name'] ?? 'Item') ?></td>
+                  <td><?= e((string) ($item['name'] ?? 'Item')) ?></td>
                   <td>
-                    <div class="quantity-control"><button type="button" data-cart-action="decrease"
-                        data-cart-index="<?= (int) $index ?>"
-                        aria-label="Decrease quantity">-</button><strong><?= (int) ($item['qty'] ?? 1) ?></strong><button type="button"
-                        data-cart-action="increase" data-cart-index="<?= (int) $index ?>" aria-label="Increase quantity">+</button></div>
+                    <div class="quantity-control">
+                      <button type="button" data-cart-action="decrease" data-cart-index="<?= (int) $index ?>"
+                        aria-label="Decrease quantity">-</button>
+                      <strong><?= (int) ($item['qty'] ?? 1) ?></strong>
+                      <button type="button" data-cart-action="increase" data-cart-index="<?= (int) $index ?>"
+                        aria-label="Increase quantity">+</button>
+                    </div>
                   </td>
                   <td>₱<?= number_format((float) ($item['price'] ?? 0), 2) ?></td>
                   <td>₱<?= number_format((float) ($item['price'] ?? 0) * (int) ($item['qty'] ?? 1), 2) ?></td>
-                  </tr>
-                  <?php endforeach; ?>
-                  <?php endif; ?>
-                  </tbody>
-                  </table>
-                  <div class="cart-actions">
-                    <a class="secondary-btn" href="index.php#menu">Continue Shopping</a>
-                    <a class="btn btn-primary checkout-action" href="checkout.php" data-checkout-link>Checkout</a>
-                  </div>
-                  </section>
+                </tr>
+              <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+                </table>
+                <div class="cart-actions">
+                  <a class="secondary-btn" href="index.php#menu">Continue Shopping</a>
+                  <a class="btn btn-primary checkout-action" href="checkout.php" data-checkout-link>Checkout</a>
+                </div>
+                </section>
 
       <aside class="summary-box panel">
         <h3>Order Summary</h3>
@@ -98,8 +104,8 @@ foreach ($cartItems as $item) {
           <span>₱<?= number_format($total, 2) ?></span>
         </div>
       </aside>
-      </div>
-      </main>
+    </div>
+  </main>
 
   <div id="cart-processing-popup" class="cart-popup" aria-live="polite">
     <strong>Order is now processing</strong>
@@ -118,17 +124,17 @@ foreach ($cartItems as $item) {
         <?php if ($isLoggedIn): ?>
           <a class="btn btn-primary" href="checkout.php">Continue to checkout</a>
         <?php else: ?>
-              <button type="button" class="btn btn-primary"
-                onclick="document.getElementById('order-confirm-modal').hidden = true; document.getElementById('login-prompt-modal').hidden = false;">Continue
-                to checkout</button>
-            <?php endif; ?>
-            </div>
-            </section>
-            </div>
+          <button type="button" class="btn btn-primary"
+            onclick="document.getElementById('order-confirm-modal').hidden = true; document.getElementById('login-prompt-modal').hidden = false;">
+            Continue to checkout
+          </button>
+        <?php endif; ?>
+      </div>
+    </section>
+  </div>
 
   <div id="login-prompt-modal" class="modal-backdrop" hidden>
-    <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="login-prompt-title"
-      style="max-height: 90vh; overflow-y: auto;">
+    <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="login-prompt-title" style="max-height: 90vh; overflow-y: auto;">
       <button class="modal-close" type="button"
         onclick="document.getElementById('login-prompt-modal').hidden = true; document.getElementById('order-confirm-modal').hidden = false;"
         aria-label="Close">&times;</button>
@@ -138,8 +144,7 @@ foreach ($cartItems as $item) {
       <form class="checkout-form magic-auth-form" method="post" action="auth.php" style="margin-top: 16px;">
         <!-- Step 1 -->
         <div class="auth-step-1">
-          <input type="email" name="email_check" class="auth-email-input" placeholder="Email address" required
-            style="margin-bottom: 16px;">
+          <input type="email" name="email_check" class="auth-email-input" placeholder="Email address" required style="margin-bottom: 16px;">
           <button type="button" class="btn btn-primary auth-continue-btn" style="width: 100%;">Continue</button>
         </div>
 
@@ -151,14 +156,14 @@ foreach ($cartItems as $item) {
 
           <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
             <strong class="auth-email-display"></strong>
-            <button type="button" class="text-link auth-back-btn"
-              style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
+            <button type="button" class="text-link auth-back-btn" style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
           </div>
 
           <input type="password" name="password" placeholder="Password" required disabled>
           <button class="btn btn-primary" type="submit" style="width: 100%;">Log in</button>
-          <p style="margin-top: 16px; text-align: center;"><a class="text-link" href="reset-password.php">Forgot or
-              reset password?</a></p>
+          <p style="margin-top: 16px; text-align: center;">
+            <a class="text-link" href="reset-password.php">Forgot or reset password?</a>
+          </p>
         </div>
 
         <!-- Step 2 (Register) -->
@@ -169,8 +174,7 @@ foreach ($cartItems as $item) {
 
           <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
             <strong class="auth-email-display"></strong>
-            <button type="button" class="text-link auth-back-btn"
-              style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
+            <button type="button" class="text-link auth-back-btn" style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
           </div>
 
           <input type="text" name="name" placeholder="Full name" required disabled>

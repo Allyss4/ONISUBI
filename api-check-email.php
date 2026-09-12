@@ -10,10 +10,10 @@ if ($email === '') {
     exit;
 }
 
-$stmt = $conn->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
-$stmt->bind_param('s', $email);
-$stmt->execute();
-$result = $stmt->get_result();
+$stmt = $conn->prepare('SELECT 1 FROM users WHERE email = :email LIMIT 1');
+$stmt->execute([':email' => $email]);
 
-echo json_encode(['exists' => $result->num_rows > 0]);
+$exists = $stmt->fetchColumn() !== false;
+
+echo json_encode(['exists' => $exists]);
 exit;

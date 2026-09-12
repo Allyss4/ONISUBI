@@ -1,27 +1,35 @@
 <?php
 require_once __DIR__ . '/config/bootstrap.php';
+
 if (!current_user_id()) {
   header('Location: auth.php');
   exit;
 }
+
 $userId = current_user_id();
-$stmt = $conn->prepare('SELECT name,email,phone,address FROM users WHERE id=?');
-$stmt->bind_param('i', $userId);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
 
-$ordersStmt = $conn->prepare('SELECT id,total,status,order_date,payment_method FROM orders WHERE user_id=? ORDER BY order_date DESC');
-$ordersStmt->bind_param('i', $userId);
-$ordersStmt->execute();
-$orders = $ordersStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+// Fetch user profile
+$stmt = $conn->prepare('SELECT name, email, phone, address FROM users WHERE id = :id');
+$stmt->execute([':id' => $userId]);
+$user = $stmt->fetch();
 
+// Fetch user orders
+$ordersStmt = $conn->prepare('SELECT id, total, status, order_date, payment_method FROM orders WHERE user_id = :user_id ORDER BY order_date DESC');
+$ordersStmt->execute([':user_id' => $userId]);
+$orders = $ordersStmt->fetchAll();
+
+// Fetch items for each order
 $orderItemsMap = [];
 foreach ($orders as $order) {
-  $itemsStmt = $conn->prepare('SELECT oi.product_id, oi.quantity, p.name FROM order_items oi JOIN Products p ON oi.product_id = p.id WHERE oi.order_id = ? ORDER BY oi.id');
-  $itemsStmt->bind_param('i', $order['id']);
-  $itemsStmt->execute();
-  $items = $itemsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-  $orderItemsMap[$order['id']] = $items;
+  $itemsStmt = $conn->prepare('
+        SELECT oi.product_id, oi.quantity, p.name 
+        FROM order_items oi 
+        JOIN products p ON oi.product_id = p.id 
+        WHERE oi.order_id = :order_id 
+        ORDER BY oi.id
+    ');
+  $itemsStmt->execute([':order_id' => $order['id']]);
+  $orderItemsMap[$order['id']] = $itemsStmt->fetchAll();
 }
 
 $statusFlow = ['Order Placed', 'Preparing', 'Out for Delivery', 'Delivered'];
@@ -32,6 +40,7 @@ if (!empty($orders)) {
     $currentStatus = 'Order Placed';
   }
 }
+
 $currentIndex = array_search($currentStatus, $statusFlow, true);
 if ($currentIndex === false) {
   $currentIndex = 0;
@@ -52,9 +61,10 @@ if ($currentIndex === false) {
 <body>
   <header class="site-header">
     <div class="container nav-wrap">
-      <a class="brand" href="index.php" aria-label="Go to ONISUBI home"><img class="brand-logo-image"
-          src="assets/images/onisubi-logo.svg" alt="ONISUBI logo"><span class="brand-wordmark"><span
-            class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span></a>
+      <a class="brand" href="index.php" aria-label="Go to ONISUBI home">
+        <img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo">
+        <span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span>
+      </a>
       <div class="nav-actions">
         <button class="cart-pill">Cart <span id="cart-count">0</span></button>
         <?php if ($userId): ?>
@@ -64,8 +74,8 @@ if ($currentIndex === false) {
             style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
         <?php endif; ?>
       </div>
-      </div>
-      </header>
+    </div>
+  </header>
 
   <main class="cart-page">
     <div class="container">
@@ -74,9 +84,9 @@ if ($currentIndex === false) {
           <div>
             <span class="eyebrow">My Account</span>
             <h2><?= e($user['name'] ?? 'Customer') ?>'s profile</h2>
-            </div>
-            <div class="account-actions">
-              <a class="btn btn-primary" href="order-status.php">Track Order</a>
+          </div>
+          <div class="account-actions">
+            <a class="btn btn-primary" href="order-status.php">Track Order</a>
             <a class="btn btn-secondary" href="settings.php">Account Settings</a>
           </div>
         </div>
@@ -99,7 +109,7 @@ if ($currentIndex === false) {
             <p><?= e($user['address'] ?? 'No delivery address saved') ?></p>
           </div>
         </div>
-        </section>
+      </section>
 
       <section class="panel account-order-panel" style="margin-top: 28px;">
         <div class="account-header">
@@ -122,7 +132,7 @@ if ($currentIndex === false) {
           </div>
         </div>
 
-        <?php if (!$orders): ?>
+        <?php if (empty($orders)): ?>
           <p class="empty-cart">You have no orders yet.</p>
         <?php else: ?>
           <div class="order-history-list">
@@ -153,30 +163,30 @@ if ($currentIndex === false) {
                     <?php else: ?>
                       <span>No items</span>
                     <?php endif; ?>
-              </div>
-            </div>
+                  </div>
+                  </div>
 
                 <div class="order-history-meta">
                   <div>
                     <span>Payment Method</span>
                     <strong><?= e($order['payment_method'] ?? 'Cash on Delivery') ?></strong>
-                    </div>
-                    <div>
-                      <span>Total</span>
-                      <strong>₱<?= number_format((float) $order['total'], 2) ?></strong>
-                    </div>
-                    </div>
-                    
-                    <div>
-                      <a class="secondary-btn" href="order-status.php?id=<?= (int) $order['id'] ?>">View receipt</a>
-                    </div>
-                    </div>
-                    <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                </section>
-                </div>
-                </main>
+                  </div>
+                  <div>
+                    <span>Total</span>
+                    <strong>₱<?= number_format((float) $order['total'], 2) ?></strong>
+                  </div>
+                  </div>
+                  
+                  <div>
+                    <a class="secondary-btn" href="order-status.php?id=<?= (int) $order['id'] ?>">View receipt</a>
+                  </div>
+                  </div>
+                  <?php endforeach; ?>
+                  </div>
+                  <?php endif; ?>
+                  </section>
+                  </div>
+                  </main>
 
   <script src="assets/js/script.js"></script>
 </body>

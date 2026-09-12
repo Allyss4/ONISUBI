@@ -1,10 +1,11 @@
 <?php
 require_once __DIR__ . '/config/bootstrap.php';
+
 $userId = require_login('checkout.php', 'checkout_required');
-$stmt = $conn->prepare('SELECT name,email,phone,address FROM users WHERE id=?');
-$stmt->bind_param('i', $userId);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
+
+$stmt = $conn->prepare('SELECT name, email, phone, address FROM users WHERE id = :id');
+$stmt->execute([':id' => $userId]);
+$user = $stmt->fetch() ?: [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -20,7 +21,10 @@ $user = $stmt->get_result()->fetch_assoc();
 <body>
     <header class="site-header">
         <div class="container nav-wrap">
-            <a class="brand" href="index.php" aria-label="Go to ONISUBI home"><img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo"><span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span></a>
+            <a class="brand" href="index.php" aria-label="Go to ONISUBI home">
+                <img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo">
+                <span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span>
+            </a>
             <nav class="main-nav" aria-label="Main navigation">
                 <a href="cart.php">Cart</a>
                 <a href="index.php#menu">Menu</a>
@@ -36,7 +40,7 @@ $user = $stmt->get_result()->fetch_assoc();
             <section class="panel">
                 <h2>Checkout</h2>
                 <form class="checkout-form" data-checkout-form>
-                    <input type="text" name="name" placeholder="Full name" value="<?= e($user['name']) ?>" required>
+                    <input type="text" name="name" placeholder="Full name" value="<?= e($user['name'] ?? '') ?>" required>
                     <input type="tel" name="phone" placeholder="Phone number" value="<?= e($user['phone'] ?? '') ?>" required>
                     <textarea name="address" rows="4" placeholder="Delivery address" required><?= e($user['address'] ?? '') ?></textarea>
                     <input type="text" name="notes" placeholder="Order notes (optional)">

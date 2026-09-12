@@ -1,31 +1,38 @@
 <?php
+declare(strict_types=1);
 require_once __DIR__ . '/config/bootstrap.php';
+
 $orderId = (int) ($_GET['id'] ?? 0);
+
 if ($orderId && isset($_GET['format']) && $_GET['format'] === 'json') {
     $stmt = $conn->prepare('SELECT o.id, o.user_id, o.total, o.status, o.payment_method, o.order_date FROM orders o WHERE o.id = ?');
-    $stmt->bind_param('i', $orderId); $stmt->execute(); $order = $stmt->get_result()->fetch_assoc();
-    if (!$order || ($order['user_id'] && $order['user_id'] !== current_user_id())) json_response(['error' => 'Order not found.'], 404);
+  $stmt->execute([$orderId]);
+  $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $itemStmt = $conn->prepare('SELECT oi.product_id, oi.quantity, oi.price, p.name AS product_name FROM order_items oi LEFT JOIN Products p ON p.id = oi.product_id WHERE oi.order_id = ?');
-    $itemStmt->bind_param('i', $orderId); $itemStmt->execute();
-    $order['items'] = $itemStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+  if (!$order || ($order['user_id'] && (int) $order['user_id'] !== current_user_id())) {
+    json_response(['error' => 'Order not found.'], 404);
+  }
+
+  $itemStmt = $conn->prepare('SELECT oi.product_id, oi.quantity, oi.price, p.name AS product_name FROM order_items oi LEFT JOIN products p ON p.id = oi.product_id WHERE oi.order_id = ?');
+  $itemStmt->execute([$orderId]);
+  $order['items'] = $itemStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     json_response($order);
 }
 
 $order = null;
 if ($orderId) {
     $stmt = $conn->prepare('SELECT o.id, o.user_id, o.total, o.status, o.payment_method, o.order_date FROM orders o WHERE o.id = ?');
-    $stmt->bind_param('i', $orderId); $stmt->execute();
-    $order = $stmt->get_result()->fetch_assoc();
+  $stmt->execute([$orderId]);
+  $order = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-    if ($order && $order['user_id'] && $order['user_id'] !== current_user_id()) {
+  if ($order && $order['user_id'] && (int) $order['user_id'] !== current_user_id()) {
         $order = null;
     }
 
     if ($order) {
-        $itemStmt = $conn->prepare('SELECT oi.product_id, oi.quantity, oi.price, p.name AS product_name FROM order_items oi LEFT JOIN Products p ON p.id = oi.product_id WHERE oi.order_id = ?');
-        $itemStmt->bind_param('i', $orderId); $itemStmt->execute();
-        $order['items'] = $itemStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $itemStmt = $conn->prepare('SELECT oi.product_id, oi.quantity, oi.price, p.name AS product_name FROM order_items oi LEFT JOIN products p ON p.id = oi.product_id WHERE oi.order_id = ?');
+    $itemStmt->execute([$orderId]);
+    $order['items'] = $itemStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 }
 
@@ -77,7 +84,7 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
                     <div class="status-flow" aria-label="Order status timeline">
                         <?php foreach ($availableStatuses as $index => $stage): ?>
                             <div class="status-flow-step <?= $index <= $currentIndex ? 'active' : '' ?>">
-                                <strong><?= $stage ?></strong>
+                                <strong><?= e($stage) ?></strong>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -95,11 +102,11 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
                             </div>
                             <div class="receipt-detail-box">
                                 <span>Status</span>
-                                <p><?= e($order['status']) ?></p>
+                                <p><?= e((string) $order['status']) ?></p>
                             </div>
                             <div class="receipt-detail-box">
                                 <span>Payment method</span>
-                                <p><?= e($paymentStatus) ?></p>
+                                <p><?= e((string) $paymentStatus) ?></p>
                             </div>
                             <div class="receipt-detail-box">
                                 <span>Delivery</span>
@@ -112,7 +119,7 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
                             <ul class="receipt-items">
                                 <?php foreach ($order['items'] as $item): ?>
                                     <li>
-                                        <span><?= e($item['product_name'] ?? 'Item') ?> × <?= (int) $item['quantity'] ?></span>
+                                        <span><?= e((string) ($item['product_name'] ?? 'Item')) ?> × <?= (int) $item['quantity'] ?></span>
                                         <strong>₱<?= number_format((float) $item['price'] * (int) $item['quantity'], 2) ?></strong>
                                     </li>
                                 <?php endforeach; ?>

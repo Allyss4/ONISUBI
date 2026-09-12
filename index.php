@@ -1,15 +1,16 @@
 <?php
+declare(strict_types=1);
 require_once __DIR__ . '/config/bootstrap.php';
-$isLoggedIn = current_user_id() !== null;
 
+$isLoggedIn = current_user_id() !== null;
 $products = [];
 
-if (isset($conn)) {
-  $result = $conn->query("SELECT id, name, price, description, image, stock, status FROM Products ORDER BY id LIMIT 8");
-  if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-      $products[] = $row;
-    }
+if (isset($conn) && $conn instanceof PDO) {
+  try {
+    $stmt = $conn->query("SELECT id, name, price, description, image, stock, status FROM products ORDER BY id LIMIT 8");
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  } catch (Throwable $e) {
+    $products = [];
   }
 }
 
@@ -29,8 +30,7 @@ if (empty($products)) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ONISUBI | Rice Snack & Musubi</title>
-  <meta name="description"
-    content="ONISUBI brings together Japanese onigiri and Hawaiian musubi in a delicious, budget-friendly snack.">
+  <meta name="description" content="ONISUBI brings together Japanese onigiri and Hawaiian musubi in a delicious, budget-friendly snack.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -40,9 +40,10 @@ if (empty($products)) {
 <body>
   <header class="site-header">
     <div class="container nav-wrap">
-      <a class="brand" href="index.php" aria-label="Go to ONISUBI home"><img class="brand-logo-image"
-          src="assets/images/onisubi-logo.svg" alt="ONISUBI logo"><span class="brand-wordmark"><span
-            class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span></a>
+      <a class="brand" href="index.php" aria-label="Go to ONISUBI home">
+        <img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo">
+        <span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span>
+      </a>
 
       <nav class="main-nav" aria-label="Main navigation">
         <a href="#about">About</a>
@@ -57,12 +58,12 @@ if (empty($products)) {
         <?php if ($isLoggedIn): ?>
           <a class="account-link" href="account.php">My Account</a>
         <?php else: ?>
-                <button type="button" class="account-link" onclick="document.getElementById('login-prompt-modal').hidden = false;"
-                  style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
-              <?php endif; ?>
+            <button type="button" class="account-link" onclick="document.getElementById('login-prompt-modal').hidden = false;"
+              style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
+          <?php endif; ?>
       </div>
-      </div>
-      </header>
+    </div>
+  </header>
 
   <main>
     <section id="home" class="hero-section">
@@ -99,8 +100,7 @@ if (empty($products)) {
         <div class="hero-visual">
           <div class="product-showcase">
             <div class="showcase-badge">Best Seller</div>
-            <img src="https://balancewithjess.com/wp-content/uploads/2022/02/Spam-Musubi-with-Egg-Feat-500x500.jpg"
-              alt="Spam Musubi with Egg">
+            <img src="https://balancewithjess.com/wp-content/uploads/2022/02/Spam-Musubi-with-Egg-Feat-500x500.jpg" alt="Spam Musubi with Egg">
             <div class="showcase-card">
               <p>Spam & Egg</p>
               <strong>₱40.00</strong>
@@ -132,16 +132,16 @@ if (empty($products)) {
           <?php foreach ($products as $product): ?>
             <article class="product-card">
               <div class="badge">₱40</div>
-              <img src="<?= htmlspecialchars($product['image']) ?>" alt="<?= htmlspecialchars($product['name']) ?>">
+              <img src="<?= e((string) ($product['image'] ?? '')) ?>" alt="<?= e((string) ($product['name'] ?? '')) ?>">
               <div class="product-info">
                 <div class="rating">★★★★★ <span>4.9</span></div>
-                <h3><?= htmlspecialchars($product['name']) ?></h3>
-                <p><?= htmlspecialchars($product['description']) ?></p>
+                <h3><?= e((string) ($product['name'] ?? '')) ?></h3>
+                <p><?= e((string) ($product['description'] ?? '')) ?></p>
                 <div class="product-bottom">
-                  <strong>₱<?= number_format((float) $product['price'], 2) ?></strong>
-                  <button class="add-cart" data-add-to-cart data-product-id="<?= (int) $product['id'] ?>"
-                    data-name="<?= htmlspecialchars($product['name']) ?>" data-price="<?= (float) $product['price'] ?>"
-                    data-image="<?= htmlspecialchars($product['image'] ?? '') ?>">Add to cart</button>
+                  <strong>₱<?= number_format((float) ($product['price'] ?? 0), 2) ?></strong>
+                  <button class="add-cart" data-add-to-cart data-product-id="<?= (int) ($product['id'] ?? 0) ?>"
+                    data-name="<?= e((string) ($product['name'] ?? '')) ?>" data-price="<?= (float) ($product['price'] ?? 0) ?>"
+                    data-image="<?= e((string) ($product['image'] ?? '')) ?>">Add to cart</button>
                   </div>
                   </div>
                   </article>
@@ -167,8 +167,7 @@ if (empty($products)) {
           <a class="btn btn-primary" href="#contact">Get yours</a>
         </div>
         <div class="deal-visual">
-          <img src="https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=80"
-            alt="Onisubi snack presentation">
+          <img src="https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=900&q=80" alt="Onisubi snack presentation">
         </div>
       </div>
     </section>
@@ -214,9 +213,10 @@ if (empty($products)) {
   <footer id="contact" class="site-footer">
     <div class="container footer-grid">
       <div>
-        <div class="brand footer-brand"><img class="brand-logo-image" src="assets/images/onisubi-logo.svg"
-            alt="ONISUBI logo"><span class="brand-wordmark"><span class="brand-oni">ONI</span><span
-              class="brand-subi">SUBI</span></span></div>
+        <div class="brand footer-brand">
+          <img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo">
+          <span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span>
+        </div>
         <p>Bringing together comfort, flavor, and affordability in every bite.</p>
       </div>
       <div>
@@ -239,17 +239,21 @@ if (empty($products)) {
       <div>
         <h4>Contact</h4>
         <ul class="contact-list">
-          <li><a class="contact-icon" href="https://www.facebook.com/share/1Aza6kpUNC/" target="_blank" rel="noopener"
-              aria-label="ONISUBI Facebook page" title="ONISUBI Facebook page"><svg viewBox="0 0 24 24"
-                aria-hidden="true">
+          <li>
+            <a class="contact-icon" href="https://www.facebook.com/share/1Aza6kpUNC/" target="_blank" rel="noopener" aria-label="ONISUBI Facebook page" title="ONISUBI Facebook page">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M14 8h3V4h-3c-3.3 0-5 1.7-5 5v3H6v4h3v4h4v-4h3l1-4h-4V9c0-.7.3-1 1-1Z" />
-              </svg></a></li>
-          <li><a class="contact-icon" href="https://maps.app.goo.gl/bxbxRkVTyakJkWbq8" target="_blank" rel="noopener"
-              aria-label="University of Caloocan location" title="University of Caloocan"><svg viewBox="0 0 24 24"
-                aria-hidden="true">
+              </svg>
+            </a>
+          </li>
+          <li>
+            <a class="contact-icon" href="https://maps.app.goo.gl/bxbxRkVTyakJkWbq8" target="_blank" rel="noopener" aria-label="University of Caloocan location" title="University of Caloocan">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z" />
                 <circle cx="12" cy="9" r="2.3" />
-              </svg></a></li>
+              </svg>
+            </a>
+          </li>
         </ul>
       </div>
     </div>
@@ -265,18 +269,15 @@ if (empty($products)) {
 
   <!-- Login/Register Modal -->
   <div id="login-prompt-modal" class="modal-backdrop" hidden>
-    <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="login-prompt-title"
-      style="max-height: 90vh; overflow-y: auto;">
-      <button class="modal-close" type="button" onclick="document.getElementById('login-prompt-modal').hidden = true;"
-        aria-label="Close">&times;</button>
+    <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="login-prompt-title" style="max-height: 90vh; overflow-y: auto;">
+      <button class="modal-close" type="button" onclick="document.getElementById('login-prompt-modal').hidden = true;" aria-label="Close">&times;</button>
       <span class="eyebrow">Welcome</span>
       <h2 id="login-prompt-title">Enter your email to continue</h2>
 
       <form class="checkout-form magic-auth-form" method="post" action="auth.php" style="margin-top: 16px;">
         <!-- Step 1 -->
         <div class="auth-step-1">
-          <input type="email" name="email_check" class="auth-email-input" placeholder="Email address" required
-            style="margin-bottom: 16px;">
+          <input type="email" name="email_check" class="auth-email-input" placeholder="Email address" required style="margin-bottom: 16px;">
           <button type="button" class="btn btn-primary auth-continue-btn" style="width: 100%;">Continue</button>
         </div>
 
@@ -288,14 +289,14 @@ if (empty($products)) {
 
           <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
             <strong class="auth-email-display"></strong>
-            <button type="button" class="text-link auth-back-btn"
-              style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
+            <button type="button" class="text-link auth-back-btn" style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
           </div>
 
           <input type="password" name="password" placeholder="Password" required disabled>
           <button class="btn btn-primary" type="submit" style="width: 100%;">Log in</button>
-          <p style="margin-top: 16px; text-align: center;"><a class="text-link" href="reset-password.php">Forgot or
-              reset password?</a></p>
+          <p style="margin-top: 16px; text-align: center;">
+            <a class="text-link" href="reset-password.php">Forgot or reset password?</a>
+          </p>
         </div>
 
         <!-- Step 2 (Register) -->
@@ -306,8 +307,7 @@ if (empty($products)) {
 
           <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
             <strong class="auth-email-display"></strong>
-            <button type="button" class="text-link auth-back-btn"
-              style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
+            <button type="button" class="text-link auth-back-btn" style="background:none;border:none;cursor:pointer;font-size:0.9rem;">Change</button>
           </div>
 
           <input type="text" name="name" placeholder="Full name" required disabled>

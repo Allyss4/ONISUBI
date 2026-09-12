@@ -1,20 +1,33 @@
 <?php
+declare(strict_types=1);
 require_once __DIR__ . '/config/bootstrap.php';
+
 if (!current_user_id()) {
   header('Location: auth.php');
   exit;
 }
+
 $userId = current_user_id();
+
+// Check if 'address' column exists in 'users' table via PostgreSQL information_schema
 $hasAddressColumn = false;
-$cols = $conn->query("SHOW COLUMNS FROM users LIKE 'address'");
-if ($cols && $cols->num_rows > 0) {
+$checkStmt = $conn->prepare("
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'address'
+");
+$checkStmt->execute();
+if ($checkStmt->fetch()) {
   $hasAddressColumn = true;
 }
 
-$stmt = $conn->prepare($hasAddressColumn ? 'SELECT name,email,phone,address FROM users WHERE id=?' : 'SELECT name,email,phone FROM users WHERE id=?');
-$stmt->bind_param('i', $userId);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
+$query = $hasAddressColumn
+  ? 'SELECT name, email, phone, address FROM users WHERE id = ?'
+  : 'SELECT name, email, phone FROM users WHERE id = ?';
+
+$stmt = $conn->prepare($query);
+$stmt->execute([$userId]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
 $message = '';
 $error = '';
@@ -30,15 +43,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $error = 'Enter a valid email address.';
   } else {
-    if ($hasAddressColumn) {
-      $stmt = $conn->prepare('UPDATE users SET name=?, email=?, phone=?, address=? WHERE id=?');
-      $stmt->bind_param('ssssi', $name, $email, $phone, $address, $userId);
-    } else {
-      $stmt = $conn->prepare('UPDATE users SET name=?, email=?, phone=? WHERE id=?');
-      $stmt->bind_param('sssi', $name, $email, $phone, $userId);
-    }
+    try {
+      if ($hasAddressColumn) {
+        $updateStmt = $conn->prepare('UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?');
+        $updateStmt->execute([$name, $email, $phone, $address, $userId]);
+      } else {
+        $updateStmt = $conn->prepare('UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?');
+        $updateStmt->execute([$name, $email, $phone, $userId]);
+      }
 
-    if ($stmt->execute()) {
       $message = 'Your account details were updated successfully.';
       $user['name'] = $name;
       $user['email'] = $email;
@@ -46,11 +59,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if ($hasAddressColumn) {
         $user['address'] = $address;
       }
-    } else {
-      $error = 'That email is already in use by another account.';
+    } catch (PDOException $e) {
+      // SQLSTATE 23505 indicates a unique violation in PostgreSQL (e.g. duplicate email)
+      if ($e->getCode() === '23505') {
+        $error = 'That email is already in use by another account.';
+      } else {
+        $error = 'An error occurred while updating your profile. Please try again.';
+      }
     }
   }
-
 }
 ?><!doctype html>
 <html lang="en">
@@ -68,9 +85,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <header class="site-header">
     <div class="container nav-wrap">
-      <a class="brand" href="index.php" aria-label="Go to ONISUBI home"><img class="brand-logo-image"
-          src="assets/images/onisubi-logo.svg" alt="ONISUBI logo"><span class="brand-wordmark"><span
-            class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span></a>
+      <a class="brand" href="index.php" aria-label="Go to ONISUBI home">
+        <img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo">
+        <span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span>
+      </a>
       <nav class="main-nav" aria-label="Main navigation">
         <a href="account.php">My Account</a>
         <a href="index.php#menu">Menu</a>
@@ -85,15 +103,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <button type="button" class="account-link" onclick="document.getElementById('login-prompt-modal').hidden = false;"
             style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
         <?php endif; ?>
-        </div>
-
+      </div>
     </div>
   </header>
 
   <main class="checkout-page">
     <div class="container checkout-layout">
       <section class="panel">
-        <span class="eyebrow">Account S ettings</span>
+        <span class="eyebrow">Account Settings</span>
         <h2>Update your profile</h2>
 
         <?php if ($error): ?>
@@ -103,19 +120,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form class="checkout-form" method="post">
-          <input type="text" name="name" value="<?= e($user['name'] ?? '') ?>" placeholder="Full name" required>
-          <input type="email" name="email" value="<?= e($user['email'] ?? '') ?>" placeholder="Email address" required>
-          <input type="tel" name="phone" value="<?= e($user['phone'] ?? '') ?>" placeholder="Contact number">
+          <input type="text" name="name" value="<?= e((string) ($user['name'] ?? '')) ?>" placeholder="Full name" required>
+          <input type="email" name="email" value="<?= e((string) ($user['email'] ?? '')) ?>" placeholder="Email address" required>
+          <input type="tel" name="phone" value="<?= e((string) ($user['phone'] ?? '')) ?>" placeholder="Contact number">
           <?php if ($hasAddressColumn): ?>
-            <textarea name="address" rows="4" placeholder="Delivery address"><?= e($user['address'] ?? '') ?></textarea>
+              <textarea name="address" rows="4" placeholder="Delivery address"><?= e((string) ($user['address'] ?? '')) ?></textarea>
           <?php endif; ?>
           <div class="checkout-actions">
             <button type="submit" class="btn btn-primary">Save Changes</button>
           </div>
         </form>
-        </section>
-      </div>
-      </main>
+      </section>
+    </div>
+  </main>
 
   <script src="assets/js/script.js"></script>
 </body>

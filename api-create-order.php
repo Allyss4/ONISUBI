@@ -2,9 +2,14 @@
 declare(strict_types=1);
 require_once __DIR__ . '/config/bootstrap.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_response(['error' => 'Method not allowed'], 405);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  json_response(['error' => 'Method not allowed'], 405);
+}
+
 $userId = current_user_id();
-if (!$userId) json_response(['error' => 'Please log in before checkout.'], 401);
+if (!$userId) {
+  json_response(['error' => 'Please log in before checkout.'], 401);
+}
 
 $items = cart_from_request();
 $name = trim((string) ($_POST['name'] ?? ''));
@@ -18,7 +23,7 @@ if (!$items || $name === '' || $phone === '' || $address === '') {
 }
 
 try {
-    $conn->begin_transaction();
+  $conn->beginTransaction();
     $total = 0.0;
     $verified = [];
 
@@ -26,10 +31,15 @@ try {
         $productId = (int) ($item['id'] ?? 0);
         $requestedQty = max(1, min(99, (int) ($item['qty'] ?? 1)));
 
-        $stmt = $conn->prepare('SELECT p.id, p.name, p.price, p.status, p.stock, COALESCE(i.quantity, p.stock) AS available_stock FROM Products p LEFT JOIN inventory i ON i.product_id = p.id WHERE p.id = ? LIMIT 1');
-        $stmt->bind_param('i', $productId);
-        $stmt->execute();
-        $product = $stmt->get_result()->fetch_assoc();
+    $stmt = $conn->prepare('
+            SELECT p.id, p.name, p.price, p.status, p.stock, COALESCE(i.quantity, p.stock) AS available_stock 
+            FROM products p 
+            LEFT JOIN inventory i ON i.product_id = p.id 
+            WHERE p.id = :id 
+            LIMIT 1
+        ');
+    $stmt->execute([':id' => $productId]);
+    $product = $stmt->fetch();
 
         if (!$product) {
             throw new RuntimeException('Product is no longer available.');
@@ -58,26 +68,45 @@ try {
     }
 
     $status = 'Order Placed';
-    $orderStmt = $conn->prepare('INSERT INTO orders (user_id, total, status, payment_method, order_date) VALUES (?, ?, ?, ?, NOW())');
-    $orderStmt->bind_param('idss', $userId, $total, $status, $paymentMethod);
-    $orderStmt->execute();
-    $orderId = (int) $orderStmt->insert_id;
+  $orderStmt = $conn->prepare('
+        INSERT INTO orders (user_id, total, status, payment_method, order_date) 
+        VALUES (:user_id, :total, :status, :payment_method, CURRENT_TIMESTAMP)
+    ');
+  $orderStmt->execute([
+    ':user_id' => $userId,
+    ':total' => $total,
+    ':status' => $status,
+    ':payment_method' => $paymentMethod,
+  ]);
+
+  $orderId = (int) $conn->lastInsertId();
 
     foreach ($verified as $item) {
-        $itemStmt = $conn->prepare('INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)');
-        $itemStmt->bind_param('iiid', $orderId, $item['id'], $item['quantity'], $item['price']);
-        $itemStmt->execute();
+    $itemStmt = $conn->prepare('
+            INSERT INTO order_items (order_id, product_id, quantity, price) 
+            VALUES (:order_id, :product_id, :quantity, :price)
+        ');
+    $itemStmt->execute([
+      ':order_id' => $orderId,
+      ':product_id' => $item['id'],
+      ':quantity' => $item['quantity'],
+      ':price' => $item['price'],
+    ]);
     }
 
     if ($paymentMethod === 'Cash on Delivery') {
         foreach ($verified as $item) {
-            $inventoryStmt = $conn->prepare('UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?');
-            $inventoryStmt->bind_param('ii', $item['quantity'], $item['id']);
-            $inventoryStmt->execute();
+      $inventoryStmt = $conn->prepare('UPDATE inventory SET quantity = quantity - :qty WHERE product_id = :product_id');
+      $inventoryStmt->execute([
+        ':qty' => $item['quantity'],
+        ':product_id' => $item['id'],
+      ]);
 
-            $stockStmt = $conn->prepare('UPDATE Products SET stock = stock - ? WHERE id = ?');
-            $stockStmt->bind_param('ii', $item['quantity'], $item['id']);
-            $stockStmt->execute();
+      $stockStmt = $conn->prepare('UPDATE products SET stock = stock - :qty WHERE id = :product_id');
+      $stockStmt->execute([
+        ':qty' => $item['quantity'],
+        ':product_id' => $item['id'],
+      ]);
         }
 
         $conn->commit();
@@ -132,6 +161,8 @@ try {
         'checkout_url' => $checkoutUrl,
     ]);
 } catch (Throwable $exception) {
-    $conn->rollback();
+  if ($conn->inTransaction()) {
+    $conn->rollBack();
+  }
     json_response(['error' => $exception->getMessage()], 400);
 }
