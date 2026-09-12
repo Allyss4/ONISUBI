@@ -5,8 +5,9 @@ declare(strict_types=1);
 function paymongo_secret_key(): string
 {
     $values = [
-        $_ENV['PAYMONGO_SECRET_KEY'] ?? $_SERVER['PAYMONGO_SECRET_KEY'] ?? getenv('PAYMONGO_SECRET_KEY'),
-        $_ENV['PAYMONGO_TEST_SECRET_KEY'] ?? $_SERVER['PAYMONGO_TEST_SECRET_KEY'] ?? getenv('PAYMONGO_TEST_SECRET_KEY'),
+    $_ENV['PAYMONGO_TEST_SECRET_KEY'] ?? null,
+    $_SERVER['PAYMONGO_TEST_SECRET_KEY'] ?? null,
+    getenv('PAYMONGO_TEST_SECRET_KEY') ?: null,
     ];
 
     foreach ($values as $value) {
@@ -21,8 +22,9 @@ function paymongo_secret_key(): string
 function paymongo_webhook_secret(): string
 {
     $values = [
-        $_ENV['PAYMONGO_WEBHOOK_SECRET'] ?? $_SERVER['PAYMONGO_WEBHOOK_SECRET'] ?? getenv('PAYMONGO_WEBHOOK_SECRET'),
-        $_ENV['PAYMONGO_TEST_WEBHOOK_SECRET'] ?? $_SERVER['PAYMONGO_TEST_WEBHOOK_SECRET'] ?? getenv('PAYMONGO_TEST_WEBHOOK_SECRET'),
+    $_ENV['PAYMONGO_TEST_WEBHOOK_SECRET'] ?? null,
+    $_SERVER['PAYMONGO_TEST_WEBHOOK_SECRET'] ?? null,
+    getenv('PAYMONGO_TEST_WEBHOOK_SECRET') ?: null,
     ];
 
     foreach ($values as $value) {
