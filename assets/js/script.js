@@ -177,7 +177,7 @@ if (cartTableBody) {
     } else {
       cartTableBody.innerHTML = items.map((item, index) => `
             <tr>
-                <td class="cart-product">${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name || '')}">` : ''}<span>${escapeHtml(item.name)}</span></td>
+                <td class="cart-product"><img src="${escapeHtml(item.image || `${BASE_PATH}assets/images/onisubi-logo.svg`)}" alt="${escapeHtml(item.name || '')}"><span>${escapeHtml(item.name)}</span></td>
                 <td><div class="quantity-control"><button type="button" data-cart-action="decrease" data-cart-index="${index}" aria-label="Decrease quantity">−</button><input type="number" inputmode="numeric" min="0" step="1" value="${Number(item.qty || 1)}" data-cart-qty-input data-cart-index="${index}" aria-label="Set quantity for ${escapeHtml(item.name)}"><button type="button" data-cart-action="increase" data-cart-index="${index}" aria-label="Increase quantity">+</button></div></td>
                 <td>${formatPeso(item.price)}</td>
                 <td>${formatPeso(item.price * item.qty)}</td>

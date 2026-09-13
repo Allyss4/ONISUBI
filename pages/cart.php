@@ -83,9 +83,7 @@ foreach ($cartItems as $item) {
               <?php foreach ($cartItems as $index => $item): ?>
                 <tr>
                   <td class="cart-product">
-                    <?php if (!empty($item['image'])): ?>
-                      <img src="<?= e((string) $item['image']) ?>" alt="<?= e((string) ($item['name'] ?? 'Item')) ?>">
-                    <?php endif; ?>
+                    <img src="<?= e(!empty($item['image']) ? (string) $item['image'] : '../assets/images/onisubi-logo.svg') ?>" alt="<?= e((string) ($item['name'] ?? 'Item')) ?>">
                     <span><?= e((string) ($item['name'] ?? 'Item')) ?></span>
                   </td>
                   <td>
