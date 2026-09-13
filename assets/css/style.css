@@ -816,8 +816,20 @@ select {
         gap: 20px;
         padding: 28px 24px;
         box-sizing: border-box;
-        width: 100%;
+        width: calc(100% - 32px);
         max-width: 100%;
+        margin: 0 auto;
+    }
+
+    /* Same fix as the 640px block below: compound selector so this beats
+       any plain ".container" rule declared later in the file, since this
+       element carries both classes at once. */
+    .container.newsletter-box {
+        width: calc(100% - 32px);
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 28px 24px;
+        box-sizing: border-box;
     }
 
     .newsletter-box>div {
@@ -918,10 +930,26 @@ select {
         padding: 24px 18px;
         border-radius: 14px;
         gap: 16px;
-        width: 100%;
+        width: calc(100% - 24px);
         max-width: 100%;
+        margin: 0 auto;
         box-sizing: border-box;
         overflow: hidden;
+    }
+
+    /* The markup puts "container" and "newsletter-box" on the SAME element
+       (<div class="container newsletter-box">). A later, unrelated ".container"
+       rule (used for the cart/page layout) matches this element too and, being
+       a single-class selector declared later in the file, was overriding the
+       width/margin/padding above and pushing this card flush to the screen
+       edges. A compound selector has higher specificity, so it always wins
+       here regardless of where any plain ".container" rule sits in the file. */
+    .container.newsletter-box {
+        width: calc(100% - 24px);
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 24px 18px;
+        box-sizing: border-box;
     }
 
     .newsletter-box>div {
