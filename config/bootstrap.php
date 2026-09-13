@@ -29,10 +29,10 @@ function current_user_id(): ?int
   return isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
 }
 
-function require_login(string $redirect = 'account.php', string $message = ''): int {
+function require_login(string $redirect = 'pages/account.php', string $message = ''): int {
     $id = current_user_id(); 
     if (!$id) { 
-        $url = 'auth.php?redirect=' . urlencode($redirect);
+        $url = 'pages/auth.php?redirect=' . urlencode($redirect);
         if ($message !== '') {
             $url .= '&msg=' . urlencode($message);
         }

@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/config/bootstrap.php';
+require_once __DIR__ . '/../config/bootstrap.php';
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 if ($action === 'logout') {
   session_destroy();
-  header('Location: index.php');
+  header('Location: ../index.php');
   exit;
 }
 
 $redirect = $_GET['redirect'] ?? $_POST['redirect'] ?? 'account.php';
-if (!in_array($redirect, ['account.php', 'checkout.php'], true)) {
+if (!in_array($redirect, ['account.php', 'checkout.php', 'pages/account.php', 'pages/checkout.php'], true)) {
     $redirect = 'account.php';
 }
 $msg = $_GET['msg'] ?? '';

@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/config/bootstrap.php';
+require_once __DIR__ . '/../config/bootstrap.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   json_response(['error' => 'Method not allowed'], 405);
@@ -122,7 +122,7 @@ try {
             'order_id' => $orderId,
             'status' => 'Order Placed',
             'payment_method' => 'Cash on Delivery',
-            'checkout_url' => 'order-status.php?id=' . $orderId,
+            'checkout_url' => 'pages/order-status.php?id=' . $orderId,
         ]);
     }
 
@@ -148,8 +148,8 @@ try {
             'attributes' => [
                 'line_items' => $lineItems,
                 'payment_method_types' => ['gcash', 'qrph', 'paymaya', 'grab_pay', 'card', 'dob'],
-        'success_url' => $baseUrl . '/order-status.php?id=' . $orderId . '&payment=success',
-        'cancel_url' => $baseUrl . '/checkout.php?payment=cancelled',
+        'success_url' => $baseUrl . '/pages/order-status.php?id=' . $orderId . '&payment=success',
+        'cancel_url' => $baseUrl . '/pages/checkout.php?payment=cancelled',
                 'reference_number' => $referenceNumber,
                 'metadata' => [
                     'order_id' => (string) $orderId,

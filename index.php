@@ -50,7 +50,7 @@ if (empty($products)) {
         <a href="#menu">Menu</a>
         <a href="#contact">Contact</a>
         <?php if ($isLoggedIn): ?>
-          <a href="account.php" class="mobile-only-link">My Account</a>
+          <a href="pages/account.php" class="mobile-only-link">My Account</a>
         <?php else: ?>
           <a href="#" class="mobile-only-link" onclick="document.getElementById('login-prompt-modal').hidden = false; return false;">Log In</a>
         <?php endif; ?>
@@ -61,7 +61,7 @@ if (empty($products)) {
           Cart <span id="cart-count">0</span>
         </button>
         <?php if ($isLoggedIn): ?>
-          <a class="account-link" href="account.php">My Account</a>
+          <a class="account-link" href="pages/account.php">My Account</a>
         <?php else: ?>
           <button type="button" class="account-link" onclick="document.getElementById('login-prompt-modal').hidden = false;"
             style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
@@ -243,8 +243,8 @@ if (empty($products)) {
         <h4>About</h4>
         <ul>
           <li><a href="#about">Our story</a></li>
-          <li><a href="terms.php">Terms & Conditions</a></li>
-          <li><a href="privacy.php">Privacy Notice</a></li>
+          <li><a href="pages/terms.php">Terms & Conditions</a></li>
+          <li><a href="pages/privacy.php">Privacy Notice</a></li>
         </ul>
       </div>
       <div>
@@ -285,7 +285,7 @@ if (empty($products)) {
       <span class="eyebrow">Welcome</span>
       <h2 id="login-prompt-title">Enter your email to continue</h2>
 
-      <form class="checkout-form magic-auth-form" method="post" action="auth.php" style="margin-top: 16px;">
+      <form class="checkout-form magic-auth-form" method="post" action="pages/auth.php" style="margin-top: 16px;">
         <!-- Step 1 -->
         <div class="auth-step-1">
           <input type="email" name="email_check" class="auth-email-input" placeholder="Email address" required style="margin-bottom: 16px;">
@@ -306,7 +306,7 @@ if (empty($products)) {
           <input type="password" name="password" placeholder="Password" required disabled>
           <button class="btn btn-primary" type="submit" style="width: 100%;">Log in</button>
           <p style="margin-top: 16px; text-align: center;">
-            <a class="text-link" href="reset-password.php">Forgot or reset password?</a>
+            <a class="text-link" href="pages/reset-password.php">Forgot or reset password?</a>
           </p>
         </div>
 

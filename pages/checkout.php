@@ -1,7 +1,7 @@
 <?php
-require_once __DIR__ . '/config/bootstrap.php';
+require_once __DIR__ . '/../config/bootstrap.php';
 
-$userId = require_login('checkout.php', 'checkout_required');
+$userId = require_login('pages/checkout.php', 'checkout_required');
 
 $stmt = $conn->prepare('SELECT name, email, phone, address FROM users WHERE id = :id');
 $stmt->execute([':id' => $userId]);
@@ -16,19 +16,19 @@ $user = $stmt->fetch() ?: [];
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
     <header class="site-header">
         <div class="container nav-wrap">
-            <a class="brand" href="index.php" aria-label="Go to ONISUBI home">
-                <img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo">
+            <a class="brand" href="../index.php" aria-label="Go to ONISUBI home">
+                <img class="brand-logo-image" src="../assets/images/onisubi-logo.svg" alt="ONISUBI logo">
                 <span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span>
             </a>
             <nav class="main-nav" id="main-nav" aria-label="Main navigation">
-                <a href="index.php">Home</a>
+                <a href="../index.php">Home</a>
                 <a href="cart.php">Cart</a>
-                <a href="index.php#menu">Menu</a>
+                <a href="../index.php#menu">Menu</a>
             </nav>
             <div class="nav-actions">
                 <button class="cart-pill">Cart <span id="cart-count">0</span></button>
@@ -121,6 +121,6 @@ $user = $stmt->fetch() ?: [];
         <span>Your ONISUBI order is being prepared.</span>
     </div>
 
-    <script src="assets/js/script.js"></script>
+    <script src="../assets/js/script.js"></script>
 </body>
 </html>

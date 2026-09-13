@@ -5,13 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ONISUBI | Terms and Conditions</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 
 <body>
   <main class="cart-page">
     <div class="container">
-      <article class="panel legal-page"><a class="text-link" href="index.php">&larr; Back to ONISUBI</a>
+      <article class="panel legal-page"><a class="text-link" href="../index.php">&larr; Back to ONISUBI</a>
         <h1>ONISUBI TERMS AND CONDITIONS</h1>
         <p>Welcome to Onisubi. By accessing or using the Onisubi website and placing an order, you agree to follow these
           Terms and Conditions.</p>
