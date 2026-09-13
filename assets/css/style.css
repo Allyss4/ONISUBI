@@ -134,7 +134,7 @@ select {
     color: var(--oni);
 }
 
-/* Mobile Burger Menu Button */
+/* mobile burger menu button */
 .nav-toggle {
     display: none;
     flex-direction: column;
@@ -172,7 +172,7 @@ select {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, background-color 0.3s ease;
 }
 
-/* Animated Hamburger to X */
+/* animated hamburger to X */
 .nav-toggle.is-active .hamburger-bar:nth-child(1) {
     transform: translateY(7.5px) rotate(45deg);
 }
@@ -186,7 +186,7 @@ select {
     transform: translateY(-7.5px) rotate(-45deg);
 }
 
-/* Mobile Menu Backdrop Overlay */
+/* mobile menu backdrop overlay */
 .nav-overlay {
     position: fixed;
     top: 0;
@@ -715,12 +715,6 @@ select {
     gap: 10px;
 }
 
-/* The generic ".site-footer ul" rule above (element + class = higher
-   specificity than ".contact-list" alone) was forcing the contact icons
-   into a single-column grid, stacking them vertically instead of using
-   ".contact-list"'s intended flex row. This compound selector has two
-   classes, so it always wins and keeps the icons side by side, on both
-   mobile and desktop. */
 .site-footer .contact-list {
     display: flex;
     flex-direction: row;
@@ -729,9 +723,6 @@ select {
     flex-wrap: wrap;
 }
 
-/* Same trick as .contact-list: a compound selector beats the generic
-   ".site-footer ul" grid rule, so the About links sit in one row with
-   pipe separators instead of stacking and eating vertical space. */
 .site-footer .about-list {
     display: flex;
     flex-wrap: wrap;
@@ -851,9 +842,6 @@ select {
         margin: 0 auto;
     }
 
-    /* Same fix as the 640px block below: compound selector so this beats
-       any plain ".container" rule declared later in the file, since this
-       element carries both classes at once. */
     .container.newsletter-box {
         width: calc(100% - 32px);
         max-width: 100%;
@@ -976,13 +964,6 @@ select {
         overflow: hidden;
     }
 
-    /* The markup puts "container" and "newsletter-box" on the SAME element
-       (<div class="container newsletter-box">). A later, unrelated ".container"
-       rule (used for the cart/page layout) matches this element too and, being
-       a single-class selector declared later in the file, was overriding the
-       width/margin/padding above and pushing this card flush to the screen
-       edges. A compound selector has higher specificity, so it always wins
-       here regardless of where any plain ".container" rule sits in the file. */
     .container.newsletter-box {
         width: calc(100% - 24px);
         max-width: 100%;
@@ -2006,8 +1987,7 @@ select {
         padding: 32px 0 48px;
     }
 
-    /* Container: symmetric, edge-safe padding instead of width/margin-auto,
-       which is what was creating uneven left/right deadspace on mobile. */
+    /* for mobile edge with space for both sides*/
     .container {
         width: 100%;
         max-width: 100%;
@@ -2023,8 +2003,7 @@ select {
         width: 100%;
     }
 
-    /* Force both cards in the cart layout (Your Cart + Order Summary)
-       to the same full width so neither looks narrower than the other. */
+    /* cart and order summary same size */
     .cart-layout>.panel,
     .cart-layout>.summary-box {
         width: 100%;
@@ -2077,7 +2056,7 @@ select {
         display: contents;
     }
 
-    /* Product image on the left, spanning rows 1-2 (title + quantity) */
+    /* product img on the left, spanning rows 1-2 (title + quantity) */
     .cart-product img {
         grid-column: 1;
         grid-row: 1 / 3;
@@ -2092,7 +2071,7 @@ select {
         box-shadow: 0 2px 6px rgba(132, 47, 10, 0.06);
     }
 
-    /* Product title in row 1, directly to the right of the image */
+    /* product title in row 1, directly to the right of the img */
     .cart-product span {
         grid-column: 2 / -1;
         grid-row: 1;
@@ -2103,7 +2082,7 @@ select {
         word-break: break-word;
     }
 
-    /* Quantity selector in row 2, directly to the right of the product image */
+    /* quantity selector in row 2, directly to the right of the product image */
     .cart-table tbody td:nth-child(2) {
         grid-column: 2;
         grid-row: 2;
@@ -2163,7 +2142,7 @@ select {
         padding: 0;
     }
 
-    /* Item price in row 3, directly below the product (spans under image + title columns) */
+    /* item price in row 3, directly below the product (spans under image + title columns) */
     .cart-table tbody td:nth-child(3) {
         grid-column: 1 / 3;
         grid-row: 3;
@@ -2182,7 +2161,7 @@ select {
         color: var(--muted);
     }
 
-    /* Subtotal stays at the bottom right */
+    /* subtotal stays at the bottom right */
     .cart-table tbody td:nth-child(4) {
         grid-column: 3;
         grid-row: 3;
@@ -2254,7 +2233,7 @@ select {
     }
 }
 
-/* Shared Onisubi visual system for customer, checkout, account, and policy views. */
+/* shared onisubi visual system for customer, checkout, account, and policy views. */
 body {
     background: var(--onisubi-beige);
     color: var(--onisubi-black);

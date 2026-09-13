@@ -18,21 +18,21 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
-// Helper function to check if a table exists in PostgreSQL
+// helper function to check if a table exists in PostgreSQL
 function tableExists($conn, $tableName) {
     $stmt = $conn->prepare("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = :table");
     $stmt->execute(['table' => strtolower($tableName)]);
     return (bool)$stmt->fetchColumn();
 }
 
-// Helper function to check if a column exists in PostgreSQL
+// helper function to check if a column exists in PostgreSQL
 function columnExists($conn, $tableName, $columnName) {
     $stmt = $conn->prepare("SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = :table AND column_name = :column");
     $stmt->execute(['table' => strtolower($tableName), 'column' => strtolower($columnName)]);
     return (bool)$stmt->fetchColumn();
 }
 
-// --- USERS TABLE SETUP ---
+// USERS TABLE SETUP
 if (tableExists($conn, 'users')) {
     if (!columnExists($conn, 'users', 'phone')) {
         $conn->exec("ALTER TABLE users ADD COLUMN phone VARCHAR(40) NULL");
@@ -46,13 +46,13 @@ if (tableExists($conn, 'users')) {
         $conn->exec("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL");
     }
 
-    // Check and seed demo user
+    // check and seed demo user
     $stmt = $conn->prepare("SELECT id FROM users WHERE name = :name OR email = :email LIMIT 1");
     $stmt->execute(['name' => 'zleaxy', 'email' => 'zleaxy']);
     if (!$stmt->fetch()) {
         $hash = password_hash('zleaxy156', PASSWORD_DEFAULT);
         
-        // Note: Make sure your users table has a 'password' column if including it in INSERT
+        // note: make sure your users table has a 'password' column if including it in INSERT
         $insertUser = $conn->prepare("INSERT INTO users (name, email, password_hash, phone, address, role, created_at) VALUES (:name, :email, :hash, :phone, :address, :role, CURRENT_TIMESTAMP)");
         $insertUser->execute([
             'name'     => 'zleaxy',
@@ -65,7 +65,7 @@ if (tableExists($conn, 'users')) {
     }
 }
 
-// --- ORDERS TABLE SETUP ---
+//ORDERS TABLE SETUP
 if (tableExists($conn, 'orders')) {
     if (columnExists($conn, 'orders', 'status')) {
         $conn->exec("UPDATE orders SET status = 'Order Placed' WHERE status IS NULL OR status = '' OR status = 'Awaiting payment'");
@@ -73,7 +73,7 @@ if (tableExists($conn, 'orders')) {
     }
 }
 
-// --- PRODUCTS & INVENTORY SETUP ---
+//PRODUCTS & INVENTORY SETUP
 if (tableExists($conn, 'products')) {
     $products = [
         ['Spam & Egg', 'Main flavor with savory spam and fluffy egg.', '40.00', 'https://balancewithjess.com/wp-content/uploads/2022/02/Spam-Musubi-with-Egg-Feat-500x500.jpg', 20, 'active'],
@@ -106,7 +106,7 @@ if (tableExists($conn, 'products')) {
         ]);
     }
 
-    // --- INVENTORY SETUP ---
+    //INVENTORY SETUP
     if (tableExists($conn, 'inventory')) {
         $productStmt = $conn->prepare("SELECT id, stock FROM products WHERE name = :name LIMIT 1");
         $inventoryExistsStmt = $conn->prepare("SELECT id FROM inventory WHERE product_id = :product_id LIMIT 1");

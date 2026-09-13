@@ -9,7 +9,7 @@ if (!current_user_id()) {
 
 $userId = current_user_id();
 
-// Check if 'address' column exists in 'users' table via PostgreSQL information_schema
+// Check if address column exists in users table via PostgreSQL information_schema
 $hasAddressColumn = false;
 $checkStmt = $conn->prepare("
     SELECT column_name 

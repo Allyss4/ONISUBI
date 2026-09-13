@@ -68,8 +68,7 @@ try {
     }
 
     $status = 'Order Placed';
-
-  // Updated INSERT statement including required customer_name, phone, address, and notes fields
+  // for orders information (w/ required field)
   $orderStmt = $conn->prepare('
         INSERT INTO orders (user_id, customer_name, phone, address, notes, total, status, payment_method, order_date) 
         VALUES (:user_id, :customer_name, :phone, :address, :notes, :total, :status, :payment_method, CURRENT_TIMESTAMP)
@@ -86,8 +85,7 @@ try {
   ]);
 
   $orderId = (int) $conn->lastInsertId();
-
-  // Updated INSERT statement including required product_name field
+  // for products w/ required field
     foreach ($verified as $item) {
     $itemStmt = $conn->prepare('
             INSERT INTO order_items (order_id, product_id, product_name, quantity, price) 
@@ -136,8 +134,8 @@ try {
             'quantity' => (int) $item['quantity'],
         ];
     }
-
-  // Dynamic base URL detection for PayMongo redirect support across local and cloud environments
+ 
+  // for paymongo
   $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
   $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
   $baseUrl = $scheme . '://' . $host;
