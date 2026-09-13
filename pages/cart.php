@@ -82,12 +82,17 @@ foreach ($cartItems as $item) {
             <?php else: ?>
               <?php foreach ($cartItems as $index => $item): ?>
                 <tr>
-                  <td><?= e((string) ($item['name'] ?? 'Item')) ?></td>
+                  <td class="cart-product">
+                    <?php if (!empty($item['image'])): ?>
+                      <img src="<?= e((string) $item['image']) ?>" alt="<?= e((string) ($item['name'] ?? 'Item')) ?>">
+                    <?php endif; ?>
+                    <span><?= e((string) ($item['name'] ?? 'Item')) ?></span>
+                  </td>
                   <td>
                     <div class="quantity-control">
                       <button type="button" data-cart-action="decrease" data-cart-index="<?= (int) $index ?>"
-                        aria-label="Decrease quantity">-</button>
-                      <strong><?= (int) ($item['qty'] ?? 1) ?></strong>
+                        aria-label="Decrease quantity">−</button>
+                      <input type="number" inputmode="numeric" min="0" step="1" value="<?= (int) ($item['qty'] ?? 1) ?>" data-cart-qty-input data-cart-index="<?= (int) $index ?>" aria-label="Set quantity for <?= e((string) ($item['name'] ?? 'Item')) ?>">
                       <button type="button" data-cart-action="increase" data-cart-index="<?= (int) $index ?>"
                         aria-label="Increase quantity">+</button>
                     </div>
