@@ -34,7 +34,7 @@ if (empty($products)) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/style.css?v=20260913c">
 </head>
 
 <body>
@@ -224,25 +224,9 @@ if (empty($products)) {
   <footer id="contact" class="site-footer">
     <div class="container footer-grid">
       <div>
-        <div class="brand footer-brand">
-          <img class="brand-logo-image" src="assets/images/onisubi-logo.svg" alt="ONISUBI logo">
-          <span class="brand-wordmark"><span class="brand-oni">ONI</span><span class="brand-subi">SUBI</span></span>
-        </div>
-        <p>Bringing together comfort, flavor, and affordability in every bite.</p>
-      </div>
-      <div>
-        <h4>Menu</h4>
-        <ul>
-          <li><a href="#menu">Spam & Egg</a></li>
-          <li><a href="#menu">Hotdog</a></li>
-          <li><a href="#menu">Tuna Mayo</a></li>
-          <li><a href="#menu">Egg</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>About</h4>
-        <ul>
-          <li><a href="#about">Our story</a></li>
+        <h4>About Us</h4>
+        <ul class="about-list">
+          <li><a href="#about">Our Story</a></li>
           <li><a href="pages/terms.php">Terms & Conditions</a></li>
           <li><a href="pages/privacy.php">Privacy Notice</a></li>
         </ul>
