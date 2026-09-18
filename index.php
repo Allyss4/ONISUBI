@@ -22,26 +22,27 @@ if (empty($products)) {
     ['id' => 4, 'name' => 'Egg', 'price' => 40, 'description' => 'Simple, comforting, and filling egg musubi favorite.', 'image' => 'https://japanesecooking101.com/wp-content/uploads/2023/10/IMG_6350.jpeg'],
   ];
 }
-
+// ALLERGENS rice, nori seaweed, luncheon meat, egg, sweet teriyaki sauce
 $productDetailsMap = [
   'spam & egg' => [
     'full_description' => 'Our signature crowd-favorite! A hearty slice of pan-seared luncheon meat glazed in a savory-sweet teriyaki shoyu reduction, layered over warm Japanese sushi rice and a fluffy seasoned scrambled egg, tightly wrapped in crisp roasted nori.',
-    'ingredients' => ['Japanese Rice', 'Nori Seaweed', 'Pan-Seared Spam', 'Scrambled Egg', 'Sweet Teriyaki Glaze'],
+    'ingredients' => ['Rice', 'Nori Seaweed', 'Luncheon Meat', 'Scrambled Egg', 'Sweet Teriyaki Glaze'],
     'allergens' => [
       ['label' => 'Contains Egg', 'type' => 'allergen'],
       ['label' => 'Contains Soy', 'type' => 'allergen'],
-      ['label' => 'Contains Pork', 'type' => 'allergen'],
     ],
     'badges' => [
       ['label' => 'Best Seller', 'type' => 'badge-bestseller'],
       ['label' => 'Fresh Daily', 'type' => 'badge-info'],
     ],
   ],
+
+  // CAN'T CHANGE THE "HOTDOG" INTO "SIZZLING HOTDOG" - DB
   'sizzling hotdog' => [
     'full_description' => 'A tasty hotdog-filled bite with rich, smoky flavor. Juicy Japanese-style grilled sausage nestled over seasoned sushi rice with sweet umami glaze, enveloped in roasted nori seaweed.',
-    'ingredients' => ['Japanese Rice', 'Roasted Nori', 'Smoky Hotdog Sausage', 'Sweet Shoyu Glaze', 'Toasted Sesame'],
+    'ingredients' => ['Rice', 'Nori Seaweed', 'Hotdog', 'Ketchup', 'Oyster Sauce', 'Pepper', 'Sugar', 'Onion'],
     'allergens' => [
-      ['label' => 'Contains Pork', 'type' => 'allergen'],
+      ['label' => 'Contains Oyster Sauce (Mollusk Allergy)', 'type' => 'allergen'],
       ['label' => 'Contains Soy', 'type' => 'allergen'],
     ],
     'badges' => [
@@ -49,23 +50,12 @@ $productDetailsMap = [
       ['label' => 'Dairy-Free', 'type' => 'badge-info'],
     ],
   ],
-  'hotdog' => [
-    'full_description' => 'A tasty hotdog-filled bite with rich, smoky flavor. Juicy Japanese-style grilled sausage nestled over seasoned sushi rice with sweet umami glaze, enveloped in roasted nori seaweed.',
-    'ingredients' => ['Japanese Rice', 'Roasted Nori', 'Smoky Hotdog Sausage', 'Sweet Shoyu Glaze', 'Toasted Sesame'],
-    'allergens' => [
-      ['label' => 'Contains Pork', 'type' => 'allergen'],
-      ['label' => 'Contains Soy', 'type' => 'allergen'],
-    ],
-    'badges' => [
-      ['label' => 'Popular Choice', 'type' => 'badge-bestseller'],
-      ['label' => 'Dairy-Free', 'type' => 'badge-info'],
-    ],
-  ],
+
   'tuna mayo' => [
     'full_description' => 'Creamy, savory tuna filling for a classic Japanese onigiri bite. Made with tender flaked skipjack tuna folded into velvety Kewpie mayonnaise, fresh cracked black pepper, sushi rice, and toasted seaweed.',
-    'ingredients' => ['Japanese Rice', 'Nori Seaweed', 'Flaked Tuna', 'Kewpie Mayonnaise', 'Black Pepper', 'Toasted Sesame'],
+    'ingredients' => ['Rice', 'Nori Seaweed', 'Tuna', 'Mayonnaise', 'Pepper', 'Soy Sauce'],
     'allergens' => [
-      ['label' => 'Contains Fish', 'type' => 'allergen'],
+      ['label' => 'Contains Fish (Tuna)', 'type' => 'allergen'],
       ['label' => 'Contains Egg', 'type' => 'allergen'],
       ['label' => 'Contains Soy', 'type' => 'allergen'],
     ],
@@ -74,12 +64,12 @@ $productDetailsMap = [
       ['label' => 'High Protein', 'type' => 'badge-info'],
     ],
   ],
+
   'egg' => [
     'full_description' => 'Simple, comforting, and filling egg musubi favorite. Featuring sweet-savory dashi-infused tamagoyaki layered over seasoned Japanese sushi rice, wrapped in roasted nori.',
-    'ingredients' => ['Japanese Rice', 'Nori Seaweed', 'Dashi Scrambled Egg', 'Sweet Tamari Shoyu', 'Toasted Sesame'],
+    'ingredients' => ['Rice', 'Nori Seaweed', 'Egg', 'Pepper', 'Salt'],
     'allergens' => [
       ['label' => 'Contains Egg', 'type' => 'allergen'],
-      ['label' => 'Contains Soy', 'type' => 'allergen'],
     ],
     'badges' => [
       ['label' => 'Vegetarian Friendly', 'type' => 'badge-bestseller'],
