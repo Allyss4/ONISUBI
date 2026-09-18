@@ -16,10 +16,98 @@ if (isset($conn) && $conn instanceof PDO) {
 
 if (empty($products)) {
   $products = [
-    ['id' => 1, 'name' => 'Spam & Egg', 'price' => 40, 'description' => 'Main flavor with savory spam and fluffy egg.', 'image' => 'https://balancewithjess.com/wp-content/uploads/2022/02/Spam-Musubi-with-Egg-Feat-500x500.jpg'],
+    ['id' => 1, 'name' => 'Spam & Egg', 'price' => 40, 'description' => 'Savory spam and fluffy egg.', 'image' => 'https://balancewithjess.com/wp-content/uploads/2022/02/Spam-Musubi-with-Egg-Feat-500x500.jpg'],
     ['id' => 2, 'name' => 'Sizzling Hotdog', 'price' => 40, 'description' => 'A tasty hotdog-filled bite with rich, smoky flavor.', 'image' => 'https://www.sbfoods-worldwide.com/recipes/rst0f40000000t14-img/416_UMAMI_TOPPING_Onigiri_ichiran.jpg'],
     ['id' => 3, 'name' => 'Tuna Mayo', 'price' => 40, 'description' => 'Creamy, savory tuna filling for a classic bite.', 'image' => 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5-EjRHu8gJ2nWryFFe9zgbQhBY7L4A1fH9eJmrOwyLZ9l7tGJzfo_QtQ3&s=10'],
     ['id' => 4, 'name' => 'Egg', 'price' => 40, 'description' => 'Simple, comforting, and filling egg musubi favorite.', 'image' => 'https://japanesecooking101.com/wp-content/uploads/2023/10/IMG_6350.jpeg'],
+  ];
+}
+
+$productDetailsMap = [
+  'spam & egg' => [
+    'full_description' => 'Our signature crowd-favorite! A hearty slice of pan-seared luncheon meat glazed in a savory-sweet teriyaki shoyu reduction, layered over warm Japanese sushi rice and a fluffy seasoned scrambled egg, tightly wrapped in crisp roasted nori.',
+    'ingredients' => ['Japanese Rice', 'Nori Seaweed', 'Pan-Seared Spam', 'Scrambled Egg', 'Sweet Teriyaki Glaze'],
+    'allergens' => [
+      ['label' => 'Contains Egg', 'type' => 'allergen'],
+      ['label' => 'Contains Soy', 'type' => 'allergen'],
+      ['label' => 'Contains Pork', 'type' => 'allergen'],
+    ],
+    'badges' => [
+      ['label' => 'Best Seller', 'type' => 'badge-bestseller'],
+      ['label' => 'Fresh Daily', 'type' => 'badge-info'],
+    ],
+  ],
+  'sizzling hotdog' => [
+    'full_description' => 'A tasty hotdog-filled bite with rich, smoky flavor. Juicy Japanese-style grilled sausage nestled over seasoned sushi rice with sweet umami glaze, enveloped in roasted nori seaweed.',
+    'ingredients' => ['Japanese Rice', 'Roasted Nori', 'Smoky Hotdog Sausage', 'Sweet Shoyu Glaze', 'Toasted Sesame'],
+    'allergens' => [
+      ['label' => 'Contains Pork', 'type' => 'allergen'],
+      ['label' => 'Contains Soy', 'type' => 'allergen'],
+    ],
+    'badges' => [
+      ['label' => 'Popular Choice', 'type' => 'badge-bestseller'],
+      ['label' => 'Dairy-Free', 'type' => 'badge-info'],
+    ],
+  ],
+  'hotdog' => [
+    'full_description' => 'A tasty hotdog-filled bite with rich, smoky flavor. Juicy Japanese-style grilled sausage nestled over seasoned sushi rice with sweet umami glaze, enveloped in roasted nori seaweed.',
+    'ingredients' => ['Japanese Rice', 'Roasted Nori', 'Smoky Hotdog Sausage', 'Sweet Shoyu Glaze', 'Toasted Sesame'],
+    'allergens' => [
+      ['label' => 'Contains Pork', 'type' => 'allergen'],
+      ['label' => 'Contains Soy', 'type' => 'allergen'],
+    ],
+    'badges' => [
+      ['label' => 'Popular Choice', 'type' => 'badge-bestseller'],
+      ['label' => 'Dairy-Free', 'type' => 'badge-info'],
+    ],
+  ],
+  'tuna mayo' => [
+    'full_description' => 'Creamy, savory tuna filling for a classic Japanese onigiri bite. Made with tender flaked skipjack tuna folded into velvety Kewpie mayonnaise, fresh cracked black pepper, sushi rice, and toasted seaweed.',
+    'ingredients' => ['Japanese Rice', 'Nori Seaweed', 'Flaked Tuna', 'Kewpie Mayonnaise', 'Black Pepper', 'Toasted Sesame'],
+    'allergens' => [
+      ['label' => 'Contains Fish', 'type' => 'allergen'],
+      ['label' => 'Contains Egg', 'type' => 'allergen'],
+      ['label' => 'Contains Soy', 'type' => 'allergen'],
+    ],
+    'badges' => [
+      ['label' => "Chef's Pick", 'type' => 'badge-bestseller'],
+      ['label' => 'High Protein', 'type' => 'badge-info'],
+    ],
+  ],
+  'egg' => [
+    'full_description' => 'Simple, comforting, and filling egg musubi favorite. Featuring sweet-savory dashi-infused tamagoyaki layered over seasoned Japanese sushi rice, wrapped in roasted nori.',
+    'ingredients' => ['Japanese Rice', 'Nori Seaweed', 'Dashi Scrambled Egg', 'Sweet Tamari Shoyu', 'Toasted Sesame'],
+    'allergens' => [
+      ['label' => 'Contains Egg', 'type' => 'allergen'],
+      ['label' => 'Contains Soy', 'type' => 'allergen'],
+    ],
+    'badges' => [
+      ['label' => 'Vegetarian Friendly', 'type' => 'badge-bestseller'],
+      ['label' => 'Comfort Classic', 'type' => 'badge-info'],
+    ],
+  ],
+];
+
+function getProductExtraDetails(array $product, array $map): array {
+  $nameKey = strtolower(trim((string)($product['name'] ?? '')));
+  if (isset($map[$nameKey])) {
+    return $map[$nameKey];
+  }
+  foreach ($map as $k => $v) {
+    if (str_contains($nameKey, $k) || str_contains($k, $nameKey)) {
+      return $v;
+    }
+  }
+  return [
+    'full_description' => (string)($product['description'] ?? 'Delicious Japanese rice snack handcrafted with quality nori and savory fillings.'),
+    'ingredients' => ['Japanese Rice', 'Roasted Nori Seaweed', 'House Seasoning', 'Chef Special Sauce'],
+    'allergens' => [
+      ['label' => 'Contains Soy', 'type' => 'allergen'],
+      ['label' => 'Freshly Prepared', 'type' => 'badge-info'],
+    ],
+    'badges' => [
+      ['label' => 'Popular', 'type' => 'badge-bestseller'],
+    ],
   ];
 }
 ?>
@@ -140,26 +228,42 @@ if (empty($products)) {
         </div>
 
         <div class="product-grid">
-          <?php foreach ($products as $product): ?>
-            <article class="product-card">
-              <div class="badge">₱40</div>
-              <img src="<?= e((string) ($product['image'] ?? '')) ?>" alt="<?= e((string) ($product['name'] ?? '')) ?>">
+          <?php foreach ($products as $product):
+            $extra = getProductExtraDetails($product, $productDetailsMap);
+            $fullData = [
+              'id' => (int) ($product['id'] ?? 0),
+              'name' => (string) ($product['name'] ?? ''),
+              'price' => (float) ($product['price'] ?? 40.0),
+              'image' => (string) ($product['image'] ?? ''),
+              'description' => $extra['full_description'],
+              'short_description' => (string) ($product['description'] ?? ''),
+              'ingredients' => $extra['ingredients'],
+              'allergens' => $extra['allergens'],
+              'badges' => $extra['badges'],
+            ];
+            $jsonData = json_encode($fullData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+          ?>
+            <article class="product-card" data-product-card data-product-json='<?= $jsonData ?>' tabindex="0" role="button" aria-haspopup="dialog" aria-label="View details for <?= e((string) ($product['name'] ?? '')) ?>">
+              <div class="product-img-wrap">
+                <img src="<?= e((string) ($product['image'] ?? '')) ?>" alt="<?= e((string) ($product['name'] ?? '')) ?>" loading="lazy">
+                <span class="product-view-hint">View details</span>
+              </div>
               <div class="product-info">
                 <div class="rating">★★★★★ <span>4.9</span></div>
                 <h3><?= e((string) ($product['name'] ?? '')) ?></h3>
                 <p><?= e((string) ($product['description'] ?? '')) ?></p>
                 <div class="product-bottom">
                   <strong>₱<?= number_format((float) ($product['price'] ?? 0), 2) ?></strong>
-                  <button class="add-cart" data-add-to-cart data-product-id="<?= (int) ($product['id'] ?? 0) ?>"
+                  <button type="button" class="add-cart" data-add-to-cart data-product-id="<?= (int) ($product['id'] ?? 0) ?>"
                     data-name="<?= e((string) ($product['name'] ?? '')) ?>" data-price="<?= (float) ($product['price'] ?? 0) ?>"
                     data-image="<?= e((string) ($product['image'] ?? '')) ?>">Add to cart</button>
-                  </div>
-                  </div>
-                  </article>
-                  <?php endforeach; ?>
-                  </div>
-                  </div>
-                  </section>
+                </div>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    </section>
 
     <section id="about" class="deal-section section-spacing">
       <div class="container deal-box">
@@ -315,7 +419,74 @@ if (empty($products)) {
     </section>
   </div>
 
-  <script src="assets/js/script.js"></script>
+  <!-- Interactive Product Detail Modal -->
+  <div id="product-detail-modal" class="modal-backdrop product-modal-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+    <div class="product-modal-dialog">
+      <button class="modal-close product-modal-close-btn" type="button" data-product-modal-close aria-label="Close product details">&times;</button>
+      
+      <div class="product-modal-body-layout">
+        <!-- Fixed Product Image Panel -->
+        <div class="product-modal-media-col">
+          <div class="product-modal-image-wrap">
+            <img id="product-modal-image" src="" alt="Product image" loading="eager">
+            <div id="product-modal-badges-overlay" class="modal-badges-overlay"></div>
+          </div>
+        </div>
+
+        <!-- Details Column -->
+        <div class="product-modal-details-col">
+          <!-- Independently Scrollable Details Panel -->
+          <div class="product-modal-content-scroll" id="product-modal-scrollable-content">
+            <div class="product-modal-header">
+              <div class="product-modal-rating">★★★★★ <span>4.9 (120+ reviews)</span></div>
+              <h2 id="product-modal-title" class="product-modal-title"></h2>
+              <div class="product-modal-base-price" id="product-modal-base-price">₱40.00</div>
+            </div>
+
+            <div class="product-modal-section">
+              <h4 class="section-title">Description</h4>
+              <p id="product-modal-description" class="product-modal-desc"></p>
+            </div>
+
+            <div class="product-modal-section">
+              <h4 class="section-title">Fresh Ingredients</h4>
+              <div id="product-modal-ingredients" class="chips-list"></div>
+            </div>
+
+            <div class="product-modal-section">
+              <h4 class="section-title">Allergen & Dietary Badges</h4>
+              <div id="product-modal-allergens" class="badges-list"></div>
+            </div>
+          </div>
+
+          <!-- Fixed Action Bar at Bottom -->
+          <div class="product-modal-sticky-cta">
+            <div class="modal-cta-left">
+              <div class="modal-stepper" aria-label="Quantity selector">
+                <button type="button" class="stepper-btn" id="modal-qty-minus" aria-label="Decrease quantity">−</button>
+                <span class="stepper-value" id="modal-qty-value" aria-live="polite">1</span>
+                <button type="button" class="stepper-btn" id="modal-qty-plus" aria-label="Increase quantity">+</button>
+              </div>
+              <div class="modal-price-container">
+                <span class="modal-price-label">Total</span>
+                <strong class="modal-calculated-price" id="modal-total-price">₱40.00</strong>
+              </div>
+            </div>
+
+            <div class="modal-cta-right">
+              <button type="button" class="btn btn-primary modal-add-cart-button" id="modal-add-to-cart-btn">
+                <span class="btn-text">Add to Cart</span>
+                <span class="btn-divider">•</span>
+                <span class="btn-price" id="modal-btn-price">₱40.00</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/script.js?v=20260918"></script>
 </body>
 
 </html>

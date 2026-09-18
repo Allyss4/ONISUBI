@@ -51,14 +51,22 @@ function updateSummaryUI() {
   }
 }
 
-function addToCart(name, price, productId, image) {
+function addToCart(name, price, productId, image, qty = 1, optionsNote = '') {
   const items = getCartItems();
-  const existing = items.find((item) => item.name === name);
+  const displayName = optionsNote ? `${name} (${optionsNote})` : name;
+  const existing = items.find((item) => item.name === displayName);
+  const quantityToAdd = Math.max(1, Number(qty || 1));
 
   if (existing) {
-    existing.qty += 1;
+    existing.qty += quantityToAdd;
   } else {
-    items.push({ id: Number(productId), name, price: Number(price), image, qty: 1 });
+    items.push({
+      id: Number(productId),
+      name: displayName,
+      price: Number(price),
+      image,
+      qty: quantityToAdd
+    });
   }
 
   saveCartItems(items);
@@ -140,16 +148,18 @@ checkoutLinks.forEach((link) => {
 
 const addButtons = document.querySelectorAll('[data-add-to-cart]');
 addButtons.forEach((button) => {
-  button.addEventListener('click', () => {
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
     const name = button.dataset.name;
     const price = button.dataset.price;
 
-    addToCart(name, price, button.dataset.productId, button.dataset.image);
-    button.textContent = 'Added';
+    addToCart(name, price, button.dataset.productId, button.dataset.image, 1);
+    const originalText = button.textContent;
+    button.textContent = 'Added ✓';
     button.disabled = true;
 
     setTimeout(() => {
-      button.textContent = 'Add to cart';
+      button.textContent = originalText;
       button.disabled = false;
     }, 800);
   });
@@ -618,8 +628,309 @@ function initMobileMenu() {
   });
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initMobileMenu);
-} else {
+function initProductDetailModal() {
+  const modal = document.getElementById('product-detail-modal');
+  if (!modal) return;
+
+  const modalCloseBtn = modal.querySelector('[data-product-modal-close]');
+  const modalImage = document.getElementById('product-modal-image');
+  const modalBadgesOverlay = document.getElementById('product-modal-badges-overlay');
+  const modalTitle = document.getElementById('product-modal-title');
+  const modalBasePrice = document.getElementById('product-modal-base-price');
+  const modalDesc = document.getElementById('product-modal-description');
+  const modalIngredients = document.getElementById('product-modal-ingredients');
+  const modalAllergens = document.getElementById('product-modal-allergens');
+  const modalSauces = document.getElementById('product-modal-sauces');
+  const modalAddons = document.getElementById('product-modal-addons');
+
+  const qtyMinusBtn = document.getElementById('modal-qty-minus');
+  const qtyPlusBtn = document.getElementById('modal-qty-plus');
+  const qtyValueEl = document.getElementById('modal-qty-value');
+  const modalTotalPrice = document.getElementById('modal-total-price');
+  const modalBtnPrice = document.getElementById('modal-btn-price');
+  const addCartBtn = document.getElementById('modal-add-to-cart-btn');
+
+  let currentProduct = null;
+  let currentQty = 1;
+  let selectedSauce = null;
+  let selectedAddons = [];
+  let modalScrollPosition = 0;
+
+  function lockBodyScroll() {
+    modalScrollPosition = window.scrollY || window.pageYOffset || 0;
+    document.body.classList.add('modal-open');
+    document.body.style.top = `-${modalScrollPosition}px`;
+  }
+
+  function unlockBodyScroll() {
+    document.body.classList.remove('modal-open');
+    document.body.style.top = '';
+
+    // Restore scroll position instantly — html has scroll-behavior: smooth,
+    // which would otherwise animate from the top down to modalScrollPosition.
+    const htmlEl = document.documentElement;
+    const previousScrollBehavior = htmlEl.style.scrollBehavior;
+    htmlEl.style.scrollBehavior = 'auto';
+    window.scrollTo(0, modalScrollPosition);
+    htmlEl.style.scrollBehavior = previousScrollBehavior;
+  }
+
+  function updatePrice() {
+    if (!currentProduct) return { unitPrice: 0, total: 0 };
+    const base = Number(currentProduct.price || 0);
+    const sauceExtra = selectedSauce ? Number(selectedSauce.price || 0) : 0;
+    const addonsExtra = selectedAddons.reduce((sum, a) => sum + Number(a.price || 0), 0);
+    const unitPrice = base + sauceExtra + addonsExtra;
+    const total = unitPrice * currentQty;
+
+    if (modalTotalPrice) modalTotalPrice.textContent = formatPeso(total);
+    if (modalBtnPrice) modalBtnPrice.textContent = formatPeso(total);
+    return { unitPrice, total };
+  }
+
+  function openModal(data) {
+    currentProduct = data;
+    currentQty = 1;
+    selectedAddons = [];
+    if (qtyValueEl) qtyValueEl.textContent = currentQty;
+
+    if (modalImage) {
+      modalImage.src = data.image || '';
+      modalImage.alt = data.name || 'Product Image';
+    }
+
+    if (modalBadgesOverlay) {
+      modalBadgesOverlay.innerHTML = '';
+      if (Array.isArray(data.badges)) {
+        data.badges
+          .filter((b) => (b.type || '') === 'badge-bestseller')
+          .forEach((b) => {
+            const span = document.createElement('span');
+            span.className = `badge-pill ${b.type || 'badge-info'}`;
+            span.textContent = b.label || '';
+            modalBadgesOverlay.appendChild(span);
+          });
+      }
+    }
+
+    if (modalTitle) modalTitle.textContent = data.name || '';
+    if (modalBasePrice) modalBasePrice.textContent = formatPeso(data.price || 40);
+    if (modalDesc) modalDesc.textContent = data.description || '';
+
+    // Ingredients Chips
+    if (modalIngredients) {
+      modalIngredients.innerHTML = '';
+      if (Array.isArray(data.ingredients) && data.ingredients.length) {
+        data.ingredients.forEach((ing) => {
+          const tag = document.createElement('span');
+          tag.className = 'chip-tag';
+          tag.textContent = ing;
+          modalIngredients.appendChild(tag);
+        });
+      } else {
+        modalIngredients.innerHTML = '<span class="chip-tag">Fresh Ingredients</span>';
+      }
+    }
+
+    // Allergen & Dietary Badges
+    if (modalAllergens) {
+      modalAllergens.innerHTML = '';
+      const allergens = Array.isArray(data.allergens) ? data.allergens : [];
+      if (allergens.length) {
+        allergens.forEach((alg) => {
+          const span = document.createElement('span');
+          span.className = `badge-pill ${alg.type || 'allergen'}`;
+          span.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                            </svg>
+           ${escapeHtml(alg.label || '')}`;
+          modalAllergens.appendChild(span);
+        });
+      } else {
+        modalAllergens.innerHTML = '<span class="badge-pill allergen">No common allergens reported</span>';
+      }
+    }
+
+    // Customizations: Sauces
+    if (modalSauces) {
+      modalSauces.innerHTML = '';
+      const sauces = data.customizations?.sauces || [];
+      selectedSauce = sauces.find((s) => s.default) || sauces[0] || null;
+
+      sauces.forEach((sauce) => {
+        const label = document.createElement('label');
+        const isChecked = selectedSauce && selectedSauce.name === sauce.name;
+        label.className = `option-pill ${isChecked ? 'is-selected' : ''}`;
+        label.innerHTML = `
+          <div class="option-pill-left">
+            <span class="option-indicator"></span>
+            <input type="radio" name="modal_sauce" value="${escapeHtml(sauce.name)}" ${isChecked ? 'checked' : ''}>
+            <span>${escapeHtml(sauce.name)}</span>
+          </div>
+          <span class="option-pill-price">${sauce.price > 0 ? `+${formatPeso(sauce.price)}` : 'Included'}</span>
+        `;
+
+        label.addEventListener('click', () => {
+          selectedSauce = sauce;
+          modalSauces.querySelectorAll('.option-pill').forEach((el) => el.classList.remove('is-selected'));
+          label.classList.add('is-selected');
+          const radio = label.querySelector('input');
+          if (radio) radio.checked = true;
+          updatePrice();
+        });
+
+        modalSauces.appendChild(label);
+      });
+    }
+
+    // Customizations: Add-ons
+    if (modalAddons) {
+      modalAddons.innerHTML = '';
+      const addons = data.customizations?.addons || [];
+      addons.forEach((addon) => {
+        const label = document.createElement('label');
+        label.className = 'option-pill is-checkbox';
+        label.innerHTML = `
+          <div class="option-pill-left">
+            <span class="option-indicator"></span>
+            <input type="checkbox" value="${escapeHtml(addon.name)}">
+            <span>${escapeHtml(addon.name)}</span>
+          </div>
+          <span class="option-pill-price">+${formatPeso(addon.price)}</span>
+        `;
+
+        const checkbox = label.querySelector('input');
+        label.addEventListener('click', (e) => {
+          e.preventDefault();
+          checkbox.checked = !checkbox.checked;
+          label.classList.toggle('is-selected', checkbox.checked);
+          if (checkbox.checked) {
+            selectedAddons.push(addon);
+          } else {
+            selectedAddons = selectedAddons.filter((a) => a.name !== addon.name);
+          }
+          updatePrice();
+        });
+
+        modalAddons.appendChild(label);
+      });
+    }
+
+    updatePrice();
+
+    // Reset Add to Cart button state
+    if (addCartBtn) {
+      addCartBtn.classList.remove('is-success');
+      const btnText = addCartBtn.querySelector('.btn-text');
+      if (btnText) btnText.textContent = 'Add to Cart';
+      addCartBtn.disabled = false;
+    }
+
+    modal.hidden = false;
+    lockBodyScroll();
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+    unlockBodyScroll();
+  }
+
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener('click', closeModal);
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden) {
+      closeModal();
+    }
+  });
+
+  if (qtyMinusBtn) {
+    qtyMinusBtn.addEventListener('click', () => {
+      if (currentQty > 1) {
+        currentQty -= 1;
+        if (qtyValueEl) qtyValueEl.textContent = currentQty;
+        updatePrice();
+      }
+    });
+  }
+
+  if (qtyPlusBtn) {
+    qtyPlusBtn.addEventListener('click', () => {
+      if (currentQty < 99) {
+        currentQty += 1;
+        if (qtyValueEl) qtyValueEl.textContent = currentQty;
+        updatePrice();
+      }
+    });
+  }
+
+  if (addCartBtn) {
+    addCartBtn.addEventListener('click', () => {
+      if (!currentProduct) return;
+      const { unitPrice } = updatePrice();
+
+      const customParts = [];
+      if (selectedSauce && selectedSauce.name) customParts.push(selectedSauce.name);
+      selectedAddons.forEach((a) => customParts.push(a.name));
+      const optionsNote = customParts.join(', ');
+
+      addToCart(currentProduct.name, unitPrice, currentProduct.id, currentProduct.image, currentQty, optionsNote);
+
+      addCartBtn.classList.add('is-success');
+      const btnText = addCartBtn.querySelector('.btn-text');
+      if (btnText) btnText.textContent = '✓ Added to Cart!';
+      addCartBtn.disabled = true;
+
+      showCartProcessingPopup('Added to Cart', `${currentQty}x ${currentProduct.name} added to your order.`);
+
+      setTimeout(() => {
+        closeModal();
+      }, 700);
+    });
+  }
+
+  // Bind product card clicks
+  document.querySelectorAll('[data-product-card]').forEach((card) => {
+    const handleOpen = () => {
+      try {
+        const raw = card.dataset.productJson;
+        if (raw) {
+          const data = JSON.parse(raw);
+          openModal(data);
+        }
+      } catch (err) {
+        console.error('Error parsing product JSON:', err);
+      }
+    };
+
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('[data-add-to-cart]')) return;
+      handleOpen();
+    });
+
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleOpen();
+      }
+    });
+  });
+}
+
+function initApp() {
   initMobileMenu();
+  initProductDetailModal();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  initApp();
 }
