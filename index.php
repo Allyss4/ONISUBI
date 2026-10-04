@@ -301,15 +301,15 @@ function getProductExtraDetails(array $product, array $map): array {
       </div>
     </section>
 
-    <section class="newsletter-section section-spacing">
+    <section id="feedback" class="newsletter-section section-spacing">
       <div class="container newsletter-box">
         <div>
-          <span class="eyebrow">Stay updated</span>
-          <h2>Catch the latest ONISUBI flavor drops</h2>
+          <span class="eyebrow">Customer feedback</span>
+          <h2>Tell us what you think of ONISUBI</h2>
         </div>
         <form class="newsletter-form">
-          <input type="email" placeholder="Enter your email address" aria-label="Email address">
-          <button type="submit" class="btn btn-primary">Subscribe</button>
+          <input type="text" maxlength="500" placeholder="Share your feedback with us" aria-label="Your feedback" required>
+          <button type="submit" class="btn btn-primary">Send feedback</button>
         </form>
       </div>
     </section>
@@ -413,7 +413,7 @@ function getProductExtraDetails(array $product, array $map): array {
   <div id="product-detail-modal" class="modal-backdrop product-modal-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
     <div class="product-modal-dialog">
       <button class="modal-close product-modal-close-btn" type="button" data-product-modal-close aria-label="Close product details">&times;</button>
-      
+
       <div class="product-modal-body-layout">
         <!-- Fixed Product Image Panel -->
         <div class="product-modal-media-col">
@@ -476,6 +476,27 @@ function getProductExtraDetails(array $product, array $map): array {
     </div>
   </div>
 
+  <script>
+    // Feedback form. Placed before script.js on purpose, so stopImmediatePropagation()
+    // blocks script.js's old "Thanks for subscribing!" handler on the same form.
+    (function () {
+      var form = document.querySelector('#feedback .newsletter-form');
+      if (!form) return;
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        var button = form.querySelector('button[type="submit"]');
+        var original = button.textContent;
+        button.textContent = 'Thank you! ✓';
+        button.disabled = true;
+        form.reset();
+        setTimeout(function () {
+          button.textContent = original;
+          button.disabled = false;
+        }, 2500);
+      });
+    })();
+  </script>
   <script src="assets/js/script.js?v=20260918"></script>
 </body>
 

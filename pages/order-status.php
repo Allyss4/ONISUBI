@@ -81,12 +81,13 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
 
     <main class="status-page">
         <div class="container">
+            <?php /* data-order-status removed on purpose: script.js would otherwise overwrite this server-rendered receipt. */ ?>
             <?php if (!$order): ?>
-                <div class="status-card" data-order-status>
+                <div class="status-card">
                     <p>No order selected or order not found.</p>
                 </div>
             <?php else: ?>
-                <div class="status-card" data-order-status>
+                <div class="status-card">
                     <div class="status-header">
                         <h2>Order Confirmed!</h2>
                         <p>Thank you for your order. Your meal is on the way.</p>
@@ -152,6 +153,10 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
                             </div>
                         </div>
                     </div>
+
+                    <p class="feedback-link-wrap" style="margin-top: 20px; text-align: center;">
+                        <a class="text-link" href="../index.php#feedback">Customer feedback</a>
+                    </p>
                 </div>
             <?php endif; ?>
         </div>

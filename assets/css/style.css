@@ -3205,5 +3205,449 @@ body {
         font-size: 0.75rem;
         line-height: 1.3;
     }
+}
 
+/* =========================================================
+   GCASH PAYMENT PAGE  ->  assets/css/gcash.css
+   Load AFTER style.css:  <link rel="stylesheet" href="../assets/css/gcash.css">
+   ========================================================= */
+
+.gcash-page {
+    padding: 48px 0 72px;
+}
+
+.gcash-heading {
+    max-width: 640px;
+    margin-bottom: 28px;
+}
+
+.gcash-heading h1 {
+    margin: 12px 0 8px;
+    color: var(--onisubi-brown);
+    font-size: clamp(1.9rem, 4vw, 2.7rem);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+}
+
+.gcash-heading p {
+    color: var(--muted);
+}
+
+.gcash-heading strong {
+    color: var(--onisubi-brown);
+}
+
+/* ---------- alerts ---------- */
+.alert {
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.alert-error {
+    background: #fdecea;
+    border-color: #f3b8b2;
+    color: #a1261b;
+}
+
+.alert-success {
+    background: #e8f5e9;
+    border-color: #b6dfb9;
+    color: #2e7d32;
+}
+
+/* ---------- header back button ---------- */
+.header-back-form {
+    margin: 0;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(132, 47, 10, 0.25);
+    background: var(--onisubi-white);
+    color: var(--onisubi-brown);
+    font-size: 0.88rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.back-btn:hover,
+.back-btn:focus-visible {
+    background: var(--onisubi-orange);
+    border-color: var(--onisubi-orange);
+    color: var(--onisubi-black);
+}
+
+/* ---------- layout ---------- */
+.gcash-layout {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 28px;
+    align-items: start;
+}
+
+.gcash-step-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--onisubi-brown);
+}
+
+.gcash-step-label span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--onisubi-orange);
+    color: var(--onisubi-black);
+    font-size: 0.9rem;
+}
+
+/* ---------- amount ---------- */
+.gcash-amount {
+    text-align: center;
+    background: rgba(255, 149, 28, 0.1);
+    border: 1px solid rgba(255, 149, 28, 0.3);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+}
+
+.gcash-amount small {
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.gcash-amount strong {
+    font-size: 2rem;
+    line-height: 1.2;
+    color: var(--onisubi-brown);
+}
+
+/* ---------- QR ---------- */
+.qr-frame {
+    width: min(300px, 100%);
+    margin: 0 auto 22px;
+    padding: 14px;
+    background: var(--onisubi-white);
+    border: 2px dashed rgba(132, 47, 10, 0.3);
+    border-radius: 20px;
+    box-shadow: 0 10px 24px rgba(132, 47, 10, 0.1);
+}
+
+.qr-frame img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+}
+
+/* ---------- instruction steps ---------- */
+.gcash-steps {
+    list-style: none;
+    counter-reset: gstep;
+    display: grid;
+    gap: 10px;
+}
+
+.gcash-steps li {
+    counter-increment: gstep;
+    position: relative;
+    padding: 10px 14px 10px 46px;
+    background: rgba(231, 212, 178, 0.2);
+    border: 1px solid rgba(132, 47, 10, 0.1);
+    border-radius: 12px;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.gcash-steps li::before {
+    content: counter(gstep);
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--onisubi-brown);
+    color: var(--onisubi-white);
+    font-size: 0.78rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gcash-steps strong {
+    color: var(--onisubi-brown);
+}
+
+/* ---------- proof form ---------- */
+.proof-form .form-group {
+    display: grid;
+    gap: 8px;
+}
+
+.proof-form label:not(.file-drop) {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--onisubi-brown);
+}
+
+.proof-form .field-hint {
+    margin-top: 0;
+}
+
+/* The hidden file input: .checkout-form input (width:100%, padding, border)
+   would otherwise override .sr-only and make it visible. */
+.proof-form input[type="file"].sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.file-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 130px;
+    padding: 18px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(231, 212, 178, 0.18);
+    border: 2px dashed rgba(132, 47, 10, 0.3);
+    border-radius: 16px;
+    color: var(--muted);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.file-drop:hover,
+.file-drop:focus-within {
+    border-color: var(--onisubi-orange);
+    background: rgba(255, 149, 28, 0.1);
+}
+
+.file-drop.has-file {
+    border-style: solid;
+    border-color: #2e7d32;
+    background: rgba(46, 125, 50, 0.06);
+}
+
+.file-drop-icon {
+    font-size: 1.8rem;
+}
+
+.file-drop-text {
+    max-width: 100%;
+    font-weight: 700;
+    color: var(--onisubi-brown);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-drop small {
+    font-size: 0.78rem;
+}
+
+.proof-preview {
+    width: 100%;
+    max-height: 260px;
+    margin-top: 6px;
+    object-fit: contain;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+}
+
+.proof-preview[hidden] {
+    display: none;
+}
+
+.proof-form .checkout-actions {
+    justify-content: flex-end;
+}
+
+.proof-form .btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ---------- already submitted ---------- */
+.gcash-done {
+    text-align: center;
+    display: grid;
+    gap: 14px;
+    justify-items: center;
+    padding: 24px 0;
+}
+
+.gcash-done-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(46, 125, 50, 0.12);
+    color: #2e7d32;
+    font-size: 2rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gcash-done p {
+    color: var(--muted);
+}
+
+/* =========================================================
+   DESKTOP (901px and up)
+   ========================================================= */
+@media (min-width: 901px) {
+    .gcash-page {
+        padding: 56px 0 88px;
+    }
+
+    /* comfortable reading width instead of the full 1180px */
+    .gcash-page .container {
+        width: min(1000px, calc(100% - 48px));
+    }
+
+    .gcash-heading {
+        max-width: none;
+        text-align: center;
+        margin: 0 auto 36px;
+    }
+
+    .gcash-heading p {
+        max-width: 560px;
+        margin: 0 auto;
+    }
+
+    .gcash-page .alert {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+        text-align: center;
+    }
+
+    /* fixed-width QR column, flexible form column, equal heights */
+    .gcash-layout {
+        grid-template-columns: 400px minmax(0, 1fr);
+        gap: 32px;
+        align-items: stretch;
+    }
+
+    .gcash-layout > .panel {
+        padding: 32px;
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .gcash-qr-card .qr-frame {
+        width: 100%;
+        max-width: 260px;
+    }
+
+    .gcash-steps {
+        margin-top: auto;
+    }
+
+    .gcash-proof-card .proof-form {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+    }
+
+    .gcash-proof-card .file-drop {
+        min-height: 170px;
+    }
+
+    .gcash-proof-card .proof-preview {
+        max-height: 220px;
+    }
+
+    .gcash-proof-card .checkout-actions {
+        margin-top: auto;
+        padding-top: 8px;
+        justify-content: space-between;
+    }
+
+    .gcash-proof-card .checkout-actions .btn {
+        min-width: 180px;
+    }
+
+    .gcash-done {
+        flex: 1;
+        align-content: center;
+    }
+}
+
+/* =========================================================
+   TABLET / MOBILE
+   ========================================================= */
+@media (max-width: 900px) {
+    .gcash-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .gcash-page {
+        padding: 28px 0 56px;
+    }
+
+    .gcash-amount strong {
+        font-size: 1.7rem;
+    }
+
+    /* the shared 640px rule makes buttons 100% wide; keep this one compact */
+    .nav-actions .back-btn,
+    .header-back-form .back-btn {
+        width: auto;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+
+    .proof-form .checkout-actions {
+        flex-direction: column-reverse;
+    }
+
+    .proof-form .checkout-actions .btn,
+    .proof-form .checkout-actions .secondary-btn {
+        width: 100%;
+    }
 }

@@ -56,16 +56,16 @@ $user = $stmt->fetch() ?: [];
                         <h3>Payment method</h3>
                         <div class="payment-options" role="radiogroup" aria-label="Payment method">
                             <label class="payment-option selected" data-payment-option>
-                                <input type="radio" name="payment_method" value="PayMongo" checked>
+                                <input type="radio" name="payment_method" value="GCash QR" checked>
                                 <span class="payment-card-content">
                                     <span class="payment-icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-credit-card-fill" viewBox="0 0 16 16">
-                                            <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1H0zm0 3v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7zm3 2h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1"/>
-                                            </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-phone-fill" viewBox="0 0 16 16">
+                                            <path d="M3 2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm6 11a1 1 0 1 0-2 0 1 1 0 0 0 2 0"/>
+                                        </svg>
                                     </span>
                                     <span class="payment-copy">
-                                        <span class="payment-title">PayMongo (E-Wallets, Cards, Banks)</span>
-                                        <span class="payment-description">Pay securely online using GCash, Maya, GrabPay, QR Ph, Cards, or Online Banking</span>
+                                        <span class="payment-title">GCash (QR Code)</span>
+                                        <span class="payment-description">Scan our GCash QR code, pay the exact amount, then upload your receipt</span>
                                     </span>
                                     <span class="payment-indicator" aria-hidden="true"></span>
                                 </span>
@@ -84,7 +84,7 @@ $user = $stmt->fetch() ?: [];
                                     </span>
                                     <span class="payment-copy">
                                         <span class="payment-title">Cash on Delivery</span>
-                                        <span class="payment-description">Pay when your order is delivered</span>
+                                        <span class="payment-description">Pay in cash when your order is delivered</span>
                                     </span>
                                     <span class="payment-indicator" aria-hidden="true"></span>
                                 </span>
@@ -92,12 +92,12 @@ $user = $stmt->fetch() ?: [];
                         </div>
 
                         <div class="payment-details" aria-live="polite">
-                            <div class="payment-instructions is-visible" data-payment-panel="PayMongo">
-                                <p>PayMongo (E-Wallets, Cards, Banks)</p>
+                            <div class="payment-instructions is-visible" data-payment-panel="GCash QR">
+                                <p>After you place your order, you'll see our GCash QR code. Pay the exact total, then upload your receipt screenshot and reference number so we can verify your payment.</p>
                             </div>
 
                             <div class="payment-instructions" data-payment-panel="Cash on Delivery" hidden>
-                                <p>You will pay in cash when your order is delivered.</p>
+                                <p>You will pay in cash when your order is delivered. No online payment needed.</p>
                             </div>
                         </div>
                     </div>
