@@ -8,7 +8,23 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
 $dotenv->load();
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    $isHttps = (
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+        (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
+        (!empty($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443)
+    );
+
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => $isHttps,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    session_start();
+}
 date_default_timezone_set('Asia/Manila');
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/supabase.php';
@@ -50,10 +66,13 @@ function is_admin(?int $userId = null): bool
 }
 
 
-function require_login(string $redirect = 'pages/account.php', string $message = ''): int {
+function require_login(string $redirect = 'account.php', string $message = ''): int {
     $id = current_user_id(); 
     if (!$id) { 
-        $url = 'pages/auth.php?redirect=' . urlencode($redirect);
+        $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        $isInPages = (strpos($scriptName, '/pages/') !== false);
+        $authUrl = $isInPages ? 'auth.php' : 'pages/auth.php';
+        $url = $authUrl . '?redirect=' . urlencode($redirect);
         if ($message !== '') {
             $url .= '&msg=' . urlencode($message);
         }
