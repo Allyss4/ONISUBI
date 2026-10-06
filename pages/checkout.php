@@ -64,7 +64,7 @@ $user = $stmt->fetch() ?: [];
                                         </svg>
                                     </span>
                                     <span class="payment-copy">
-                                        <span class="payment-title">GCash (QR Code)</span>
+                                        <span class="payment-title">Paymongo</span>
                                         <span class="payment-description">Scan our GCash QR code, pay the exact amount, then upload your receipt</span>
                                     </span>
                                     <span class="payment-indicator" aria-hidden="true"></span>

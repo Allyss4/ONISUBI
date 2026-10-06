@@ -1,3 +1,92 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ONISUBI Admin — Inventory</title><link rel="stylesheet" href="assets/admin-ui.css"></head>
-<body><aside class="sidebar"><div class="brand"><img src="assets/images/onisubi-logo.svg"><div>ONI<span>SUBI</span><small>ADMIN PANEL</small></div></div><div class="nav-title">MANAGEMENT</div><nav class="nav"><a href="index.html" class="" data-nav="index.html"><i class="dot"></i>Dashboard</a><a href="customers.html" class="" data-nav="customers.html"><i class="dot"></i>Customers</a><a href="staff.html" class="" data-nav="staff.html"><i class="dot"></i>Staff & Admins</a><a href="orders.html" class="" data-nav="orders.html"><i class="dot"></i>Orders</a><a href="products.html" class="" data-nav="products.html"><i class="dot"></i>Products</a><a href="inventory.html" class="active" data-nav="inventory.html"><i class="dot"></i>Inventory</a><a href="reports.html" class="" data-nav="reports.html"><i class="dot"></i>Customer Reviews</a><a href="payment-settings.html" class="" data-nav="payment-settings.html"><i class="dot"></i>Payment Settings</a></nav><div class="bottom"><small>UI-ONLY VERSION</small><a href="../index.html">← Back to site</a></div></aside>
-<main class="main"><header class="top"><b>ONISUBI Admin</b><div class="user"><span class="avatar">A</span>Admin Demo</div></header><div class="content"><div class="title"><div><div class="eyebrow">Admin Panel</div><h1>Inventory</h1></div></div><section class="panel"><div class="notice">UI demo only. Stock values below are sample data and are not connected to MySQL.</div><table class="table"><tr><th>Product</th><th>Current Stock</th><th>Low Stock Limit</th><th>Status</th></tr><tr><td>Spam & Egg</td><td>20</td><td>5</td><td><span class="badge active">Good</span></td></tr><tr><td>Tuna Mayo</td><td>3</td><td>5</td><td><span class="badge pending">Low Stock</span></td></tr><tr><td>Egg</td><td>0</td><td>5</td><td><span class="badge out">Out of Stock</span></td></tr></table></section></div></main><script src="assets/admin-ui.js"></script></body></html>
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ONISUBI Admin — Inventory</title>
+    <link rel="stylesheet" href="assets/admin-ui.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="assets/images/onisubi-logo.svg" />
+        <div>
+          ONI<span>SUBI</span>
+          <small>ADMIN PANEL</small>
+        </div>
+      </div>
+      <div class="nav-title">MANAGEMENT</div>
+      <nav class="nav">
+        <a href="index.html" data-nav="index.html">
+          <i class="dot"></i>
+          Dashboard
+        </a>
+        <a href="customers.html" data-nav="customers.html">
+          <i class="dot"></i>
+          Customers
+        </a>
+        <a href="staff.html" data-nav="staff.html">
+          <i class="dot"></i>
+          Staff & Admins
+        </a>
+        <a href="orders.html" data-nav="orders.html">
+          <i class="dot"></i>
+          Orders
+        </a>
+        <a href="products.html" data-nav="products.html">
+          <i class="dot"></i>
+          Products
+        </a>
+        <a href="inventory.html" class="active" data-nav="inventory.html">
+          <i class="dot"></i>
+          Inventory
+        </a>
+        <a href="reports.html" data-nav="reports.html">
+          <i class="dot"></i>
+          Customer Reviews
+        </a>
+        <a href="payment-settings.html" data-nav="payment-settings.html">
+          <i class="dot"></i>
+          Payment Settings
+        </a>
+      </nav>
+      <div class="bottom">
+        <small>ADMIN</small>
+        <a href="../index.html">← Back to site</a>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="top">
+        <b>ONISUBI Admin</b>
+        <div class="user">
+          <span class="avatar">A</span>
+          Admin
+        </div>
+      </header>
+      <div class="content">
+        <div class="title">
+          <div>
+            <div class="eyebrow">Admin Panel</div>
+            <h1>Inventory</h1>
+          </div>
+        </div>
+        <section class="panel">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Current Stock</th>
+                <th>Low Stock Limit</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-body">
+              <tr><td colspan="4" class="empty">No data yet.</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+    <script src="assets/admin-ui.js"></script>
+  </body>
+</html>
