@@ -80,7 +80,7 @@ if ($currentIndex === false) {
         <?php if ($userId): ?>
           <a href="auth.php?action=logout" class="mobile-only-link">Log Out</a>
         <?php else: ?>
-          <a href="#" class="mobile-only-link" onclick="document.getElementById('login-prompt-modal').hidden = false; return false;">Log In</a>
+          <a href="auth.php?redirect=account.php" class="mobile-only-link">Log In</a>
         <?php endif; ?>
       </nav>
       <div class="nav-actions">
@@ -88,8 +88,7 @@ if ($currentIndex === false) {
         <?php if ($userId): ?>
           <a class="secondary-btn" href="auth.php?action=logout">Log Out</a>
         <?php else: ?>
-          <button type="button" class="account-link" onclick="document.getElementById('login-prompt-modal').hidden = false;"
-            style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
+          <a class="secondary-btn" href="auth.php?redirect=account.php">Log In</a>
         <?php endif; ?>
         <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="main-nav">
           <span class="hamburger-bar"></span>
