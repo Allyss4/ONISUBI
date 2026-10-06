@@ -16,16 +16,15 @@ function admin_require_user(): array
 {
     $userId = (int) ($_SESSION['user_id'] ?? 0);
     if ($userId <= 0) {
-        header('Location: ../auth.php');
+        header('Location: ../pages/auth.php');
         exit;
     }
 
-    $stmt = $GLOBALS['conn']->prepare('SELECT id, name, email, role FROM users WHERE id = ? LIMIT 1');
-    $stmt->bind_param('i', $userId);
-    $stmt->execute();
-    $user = $stmt->get_result()->fetch_assoc();
+    $stmt = $GLOBALS['conn']->prepare('SELECT id, name, email, role FROM users WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user || !in_array(strtolower((string) $user['role']), ['admin', 'staff'], true)) {
+    if (!$user || !in_array(strtolower((string) ($user['role'] ?? '')), ['admin', 'staff'], true)) {
         http_response_code(403);
         exit('Administrator access is required.');
     }

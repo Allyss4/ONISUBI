@@ -9,9 +9,14 @@ if (!current_user_id()) {
 $userId = current_user_id();
 
 // Fetch user profile
-$stmt = $conn->prepare('SELECT name, email, phone, address FROM users WHERE id = :id');
+$stmt = $conn->prepare('SELECT name, email, phone, address, role FROM users WHERE id = :id');
 $stmt->execute([':id' => $userId]);
 $user = $stmt->fetch();
+
+if ($user && in_array(strtolower((string)($user['role'] ?? '')), ['admin', 'staff'], true)) {
+  header('Location: ../admin/dashboard.php');
+  exit;
+}
 
 // Fetch user orders
 $ordersStmt = $conn->prepare('SELECT id, total, status, order_date, payment_method FROM orders WHERE user_id = :user_id ORDER BY order_date DESC');
@@ -69,6 +74,9 @@ if ($currentIndex === false) {
         <a href="../index.php">Home</a>
         <a href="../index.php#menu">Menu</a>
         <a href="settings.php">Settings</a>
+        <?php if (in_array(strtolower((string)($user['role'] ?? '')), ['admin', 'staff'], true)): ?>
+          <a href="../admin/dashboard.php" style="font-weight: 700; color: #ff6b35;">Admin Panel</a>
+        <?php endif; ?>
         <?php if ($userId): ?>
           <a href="auth.php?action=logout" class="mobile-only-link">Log Out</a>
         <?php else: ?>
@@ -102,6 +110,9 @@ if ($currentIndex === false) {
             <h2><?= e($user['name'] ?? 'Customer') ?>'s profile</h2>
           </div>
           <div class="account-actions">
+            <?php if (in_array(strtolower((string)($user['role'] ?? '')), ['admin', 'staff'], true)): ?>
+              <a class="btn btn-primary" href="../admin/dashboard.php" style="background: #e63946; border-color: #e63946;">⚡ Admin Dashboard</a>
+            <?php endif; ?>
             <a class="btn btn-primary" href="order-status.php">Track Order</a>
             <a class="btn btn-secondary" href="settings.php">Account Settings</a>
           </div>

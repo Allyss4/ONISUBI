@@ -9,14 +9,18 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     admin_verify_csrf();
     $action = (string) ($_POST['action'] ?? '');
+
     if ($action === 'delete') {
         $productId = (int) ($_POST['product_id'] ?? 0);
-        $stmt = $conn->prepare("UPDATE products SET status='deleted' WHERE id=?");
-        $stmt->bind_param('i', $productId);
-        $message = $stmt->execute() ? 'Product removed from the menu.' : '';
-        $error = $stmt->error;
+        try {
+            $stmt = $conn->prepare("UPDATE products SET status = 'deleted' WHERE id = :id");
+            $stmt->execute([':id' => $productId]);
+            $message = 'Product removed from the menu.';
+        } catch (Throwable $e) {
+            $error = $e->getMessage();
+        }
     } elseif (in_array($action, ['create', 'update'], true)) {
-        $productId = (int) ($_POST['product_id'] ?? 0);
+        $productId = $action === 'update' ? (int) ($_POST['product_id'] ?? 0) : 0;
         $name = trim((string) ($_POST['name'] ?? ''));
         $description = trim((string) ($_POST['description'] ?? ''));
         $price = (float) ($_POST['price'] ?? 0);
@@ -24,55 +28,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = (string) ($_POST['status'] ?? 'active');
         $stock = max(0, (int) ($_POST['stock'] ?? 0));
         $lowStockLimit = max(0, (int) ($_POST['low_stock_limit'] ?? 5));
+
         if ($name === '' || $price <= 0 || !in_array($status, ['active', 'unavailable'], true)) {
             $error = 'Enter a product name, a price greater than zero, and a valid availability.';
         } else {
-            if ($action === 'create') {
-                $conn->begin_transaction();
-                $stmt = $conn->prepare('INSERT INTO products (name,description,price,image,stock,status) VALUES (?,?,?,?,?,?)');
-                $stmt->bind_param('ssdsis', $name, $description, $price, $image, $stock, $status);
-                if ($stmt->execute()) {
-                    $productId = (int) $stmt->insert_id;
-                    $inventory = $conn->prepare('INSERT INTO inventory (product_id,quantity,low_stock_limit) VALUES (?,?,?)');
-                    $inventory->bind_param('iii', $productId, $stock, $lowStockLimit);
-                    if ($inventory->execute()) {
-                        $conn->commit();
-                        $message = 'Product added to the menu.';
-                    } else {
-                        $conn->rollback();
-                        $error = 'Unable to create inventory for this product.';
-                    }
+            try {
+                $res = supabase_call_rpc($conn, 'upsert_product', [
+                    'id'              => $productId,
+                    'name'            => $name,
+                    'description'     => $description,
+                    'price'           => $price,
+                    'image'           => $image,
+                    'stock'           => $stock,
+                    'status'          => $status,
+                    'low_stock_limit' => $lowStockLimit,
+                ]);
+
+                if (is_array($res) && !empty($res['success'])) {
+                    $message = $action === 'create' ? 'Product added to the menu.' : 'Product changes saved.';
                 } else {
-                    $conn->rollback();
-                    $error = 'Unable to add this product.';
+                    $error = 'Unable to save product.';
                 }
-            } else {
-                $conn->begin_transaction();
-                $stmt = $conn->prepare('UPDATE products SET name=?,description=?,price=?,image=?,stock=?,status=? WHERE id=?');
-                $stmt->bind_param('ssdsisi', $name, $description, $price, $image, $stock, $status, $productId);
-                $updated = $stmt->execute();
-                if ($updated) {
-                    $inventoryCheck = $conn->prepare('SELECT id FROM inventory WHERE product_id=? LIMIT 1');
-                    $inventoryCheck->bind_param('i', $productId);
-                    $inventoryCheck->execute();
-                    $inventoryRow = $inventoryCheck->get_result()->fetch_assoc();
-                    if ($inventoryRow) {
-                        $inventory = $conn->prepare('UPDATE inventory SET quantity=?,low_stock_limit=? WHERE id=?');
-                        $inventoryId = (int) $inventoryRow['id'];
-                        $inventory->bind_param('iii', $stock, $lowStockLimit, $inventoryId);
-                    } else {
-                        $inventory = $conn->prepare('INSERT INTO inventory (product_id,quantity,low_stock_limit) VALUES (?,?,?)');
-                        $inventory->bind_param('iii', $productId, $stock, $lowStockLimit);
-                    }
-                    $updated = $inventory->execute();
-                }
-                if ($updated) {
-                    $conn->commit();
-                    $message = 'Product changes saved.';
-                } else {
-                    $conn->rollback();
-                    $error = 'Unable to save this product.';
-                }
+            } catch (Throwable $e) {
+                $error = $e->getMessage();
             }
         }
     }
@@ -81,33 +59,172 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $editId = (int) ($_GET['edit'] ?? 0);
 $editing = null;
 if ($editId > 0) {
-    $stmt = $conn->prepare("SELECT p.*,COALESCE(i.quantity,p.stock) AS current_stock,COALESCE(i.low_stock_limit,5) AS low_stock_limit FROM products p LEFT JOIN inventory i ON i.product_id=p.id WHERE p.id=? AND p.status<>'deleted'");
-    $stmt->bind_param('i', $editId);
-    $stmt->execute();
-    $editing = $stmt->get_result()->fetch_assoc();
+    $editStmt = $conn->prepare('
+        SELECT p.*, COALESCE(i.quantity, p.stock, 0) AS current_stock, COALESCE(i.low_stock_limit, 5) AS low_stock_limit
+        FROM products p
+        LEFT JOIN inventory i ON i.product_id = p.id
+        WHERE p.id = :id
+    ');
+    $editStmt->execute([':id' => $editId]);
+    $editing = $editStmt->fetch(PDO::FETCH_ASSOC);
 }
-$products = $conn->query("SELECT p.*,COALESCE(i.quantity,p.stock) AS current_stock,COALESCE(i.low_stock_limit,5) AS low_stock_limit FROM products p LEFT JOIN inventory i ON i.product_id=p.id WHERE LOWER(p.status)<>'deleted' ORDER BY p.id DESC");
-$adminRole = strtolower((string) $adminUser['role']);
+
+// Fetch product catalog via Supabase RPC: get_products_with_inventory
+$products = supabase_call_rpc_table($conn, 'get_products_with_inventory');
+$adminRole = strtolower((string) ($adminUser['role'] ?? ''));
+
 require __DIR__ . '/_header.php';
 ?>
-<section class="admin-page-heading"><div><span class="admin-eyebrow">Catalog</span><h1>Products</h1><p>Keep the ONISUBI menu, prices, and availability up to date.</p></div></section>
-<?php if ($message): ?><p class="admin-alert admin-alert-success"><?= admin_escape($message) ?></p><?php endif; ?><?php if ($error): ?><p class="admin-alert admin-alert-error"><?= admin_escape($error) ?></p><?php endif; ?>
-<div class="admin-management-grid">
-    <section class="admin-panel admin-form-panel"><div class="admin-panel-heading"><div><span class="admin-eyebrow"><?= $editing ? 'Edit item' : 'New menu item' ?></span><h2><?= $editing ? 'Product details' : 'Add a product' ?></h2></div></div>
-        <form class="admin-form" method="post">
-            <?= admin_csrf_field() ?><input type="hidden" name="action" value="<?= $editing ? 'update' : 'create' ?>"><input type="hidden" name="product_id" value="<?= (int) ($editing['id'] ?? 0) ?>">
-            <label>Product name<input name="name" required maxlength="100" value="<?= admin_escape($editing['name'] ?? '') ?>"></label>
-            <label>Description<textarea name="description" rows="3"><?= admin_escape($editing['description'] ?? '') ?></textarea></label>
-            <div class="admin-form-row"><label>Price (PHP)<input type="number" name="price" min="0.01" step="0.01" required value="<?= admin_escape($editing['price'] ?? '40.00') ?>"></label><label>Availability<select name="status"><option value="active" <?= ($editing['status'] ?? 'active') === 'active' ? 'selected' : '' ?>>Available</option><option value="unavailable" <?= ($editing['status'] ?? '') === 'unavailable' ? 'selected' : '' ?>>Unavailable</option></select></label></div>
-            <label>Image URL<input type="url" name="image" value="<?= admin_escape($editing['image'] ?? '') ?>" placeholder="https://..."></label>
-            <div class="admin-form-row"><label>Current stock<input type="number" name="stock" min="0" step="1" value="<?= (int) ($editing['current_stock'] ?? 0) ?>"></label><label>Low-stock limit<input type="number" name="low_stock_limit" min="0" step="1" value="<?= (int) ($editing['low_stock_limit'] ?? 5) ?>"></label></div>
-            <div class="admin-form-actions"><button class="admin-button-primary" type="submit"><?= $editing ? 'Save changes' : 'Add product' ?></button><?php if ($editing): ?><a class="admin-button-secondary" href="products.php">Cancel</a><?php endif; ?></div>
+<div class="title">
+    <div>
+        <div class="eyebrow">Admin Panel</div>
+        <h1>Products</h1>
+    </div>
+    <div style="font-size: 13px; color: var(--muted); font-weight: 700;">
+        Total: <?= count($products) ?> items
+    </div>
+</div>
+
+<?php if ($message): ?>
+    <div style="background: #e4f1e5; color: #38603f; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 600;">
+        <?= admin_escape($message) ?>
+    </div>
+<?php endif; ?>
+<?php if ($error): ?>
+    <div style="background: #fde8e8; color: #a94442; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 600;">
+        <?= admin_escape($error) ?>
+    </div>
+<?php endif; ?>
+
+<div class="grid2">
+    <!-- Form Panel -->
+    <section class="panel">
+        <h2 style="margin-top: 0;"><?= $editing ? 'Edit Product' : 'Add New Product' ?></h2>
+        <form method="post">
+            <?= admin_csrf_field() ?>
+            <input type="hidden" name="action" value="<?= $editing ? 'update' : 'create' ?>">
+            <input type="hidden" name="product_id" value="<?= (int) ($editing['id'] ?? 0) ?>">
+
+            <div style="display: grid; gap: 14px;">
+                <label style="display: grid; gap: 6px; font-weight: 600; font-size: 13px;">
+                    Product Name
+                    <input name="name" required maxlength="100" value="<?= admin_escape($editing['name'] ?? '') ?>"
+                           style="padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;">
+                </label>
+
+                <label style="display: grid; gap: 6px; font-weight: 600; font-size: 13px;">
+                    Description
+                    <textarea name="description" rows="3"
+                              style="padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;"><?= admin_escape($editing['description'] ?? '') ?></textarea>
+                </label>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <label style="display: grid; gap: 6px; font-weight: 600; font-size: 13px;">
+                        Price (₱)
+                        <input type="number" name="price" min="0.01" step="0.01" required value="<?= admin_escape($editing['price'] ?? '40.00') ?>"
+                               style="padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;">
+                    </label>
+                    <label style="display: grid; gap: 6px; font-weight: 600; font-size: 13px;">
+                        Availability
+                        <select name="status" style="padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; background: #fff;">
+                            <option value="active" <?= ($editing['status'] ?? 'active') === 'active' ? 'selected' : '' ?>>Available</option>
+                            <option value="unavailable" <?= ($editing['status'] ?? '') === 'unavailable' ? 'selected' : '' ?>>Unavailable</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label style="display: grid; gap: 6px; font-weight: 600; font-size: 13px;">
+                    Image URL
+                    <input type="url" name="image" value="<?= admin_escape($editing['image'] ?? '') ?>" placeholder="https://..."
+                           style="padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;">
+                </label>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <label style="display: grid; gap: 6px; font-weight: 600; font-size: 13px;">
+                        Initial Stock
+                        <input type="number" name="stock" min="0" step="1" value="<?= (int) ($editing['current_stock'] ?? 50) ?>"
+                               style="padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;">
+                    </label>
+                    <label style="display: grid; gap: 6px; font-weight: 600; font-size: 13px;">
+                        Low Stock Alert Limit
+                        <input type="number" name="low_stock_limit" min="0" step="1" value="<?= (int) ($editing['low_stock_limit'] ?? 5) ?>"
+                               style="padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;">
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 6px;">
+                    <button type="submit" class="btn" style="background: var(--orange); color: var(--brown); border: none; padding: 12px 20px; border-radius: 6px; font-weight: 700; cursor: pointer;">
+                        <?= $editing ? 'Save Changes' : '+ Add Product' ?>
+                    </button>
+                    <?php if ($editing): ?>
+                        <a href="products.php" class="btn" style="background: var(--line); color: var(--ink); padding: 12px 16px; border-radius: 6px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center;">Cancel</a>
+                    <?php endif; ?>
+                </div>
+            </div>
         </form>
     </section>
-    <section class="admin-panel"><div class="admin-panel-heading"><div><span class="admin-eyebrow">Menu overview</span><h2>Product list</h2></div><span class="admin-count-pill"><?= $products ? $products->num_rows : 0 ?> items</span></div>
-        <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-        <?php if ($products && $products->num_rows): while ($product = $products->fetch_assoc()): ?><tr><td><div class="admin-product-cell"><?php if ($product['image']): ?><img src="<?= admin_escape($product['image']) ?>" alt=""><?php else: ?><span class="admin-product-placeholder">O</span><?php endif; ?><strong><?= admin_escape($product['name']) ?></strong></div></td><td>₱<?= number_format((float) $product['price'], 2) ?></td><td><?= (int) $product['current_stock'] ?></td><td><span class="admin-status <?= $product['status'] === 'active' ? 'status-completed' : 'status-cancelled' ?>"><?= $product['status'] === 'active' ? 'Available' : 'Unavailable' ?></span></td><td><div class="admin-row-actions"><a href="products.php?edit=<?= (int) $product['id'] ?>" title="Edit Product" aria-label="Edit Product"><i class="bi bi-pencil-square" aria-hidden="true"></i></a><?php if ($adminRole === 'admin'): ?><form method="post" onsubmit="return confirm('Remove this product from the menu?')"><?= admin_csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="product_id" value="<?= (int) $product['id'] ?>"><button type="submit" class="admin-text-danger">Remove</button></form><?php endif; ?></div></td></tr><?php endwhile; else: ?><tr><td colspan="5" class="admin-empty">No products found.</td></tr><?php endif; ?>
-        </tbody></table></div>
+
+    <!-- Product List Panel -->
+    <section class="panel">
+        <h2 style="margin-top: 0;">Menu Catalog</h2>
+        <div class="tablewrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="products-body">
+                <?php if (!empty($products)): foreach ($products as $p): ?>
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <?php if (!empty($p['image'])): ?>
+                                    <img src="<?= admin_escape($p['image']) ?>" alt="" style="width: 36px; height: 36px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line);">
+                                <?php else: ?>
+                                    <span style="width: 36px; height: 36px; background: var(--cream); display: grid; place-items: center; border-radius: 6px; font-weight: 800; color: var(--brown);">O</span>
+                                <?php endif; ?>
+                                <strong><?= admin_escape($p['name']) ?></strong>
+                            </div>
+                        </td>
+                        <td>₱<?= number_format((float) $p['price'], 2) ?></td>
+                        <td>
+                            <?php
+                            $qty = (int) ($p['inventory_quantity'] ?? $p['current_stock'] ?? $p['stock'] ?? 0);
+                            $limit = (int) ($p['low_stock_limit'] ?? 5);
+                            ?>
+                            <strong style="<?= $qty <= $limit ? 'color: var(--red);' : '' ?>"><?= $qty ?></strong>
+                        </td>
+                        <td>
+                            <span class="badge <?= $p['status'] === 'active' ? 'completed' : 'pending' ?>">
+                                <?= $p['status'] === 'active' ? 'Available' : 'Unavailable' ?>
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <a href="products.php?edit=<?= (int) $p['id'] ?>" class="eye" title="Edit product">✎</a>
+                                <?php if ($adminRole === 'admin'): ?>
+                                    <form method="post" onsubmit="return confirm('Remove this product from the menu?');" style="margin: 0;">
+                                        <?= admin_csrf_field() ?>
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="product_id" value="<?= (int) $p['id'] ?>">
+                                        <button type="submit" style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 14px; font-weight: 700;" title="Delete">✕</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                    </tr>
+                <?php endforeach; else: ?>
+                    <tr><td colspan="5" class="empty">No products found.</td></tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </section>
 </div>
+
 <?php require __DIR__ . '/_footer.php'; ?>

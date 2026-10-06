@@ -1,13 +1,17 @@
 <?php
+declare(strict_types=1);
+
 $activePage = $activePage ?? '';
 $adminUser = $adminUser ?? admin_require_user();
 $adminNavigation = [
     'dashboard' => ['Dashboard', 'dashboard.php'],
-    'products' => ['Products', 'products.php'],
+    'customers' => ['Customers', 'customers.php'],
+    'staff'     => ['Staff & Admins', 'staff.php'],
+    'orders'    => ['Orders', 'orders.php'],
+    'products'  => ['Products', 'products.php'],
     'inventory' => ['Inventory', 'inventory.php'],
-    'orders' => ['Orders', 'orders.php'],
-    'users' => ['Users', 'users.php'],
-    'reports' => ['Customer Reviews', 'reports.php'],
+    'reports'   => ['Customer Reviews', 'reports.php'],
+    'payment'   => ['Payment Settings', 'payment-settings.php'],
 ];
 ?>
 <!doctype html>
@@ -15,37 +19,46 @@ $adminNavigation = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ONISUBI Admin | <?= $activePage === 'reports' ? 'Customer Reviews' : admin_escape(ucfirst($activePage)) ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css">
+    <title>ONISUBI Admin — <?= admin_escape(ucfirst($activePage)) ?></title>
+    <link rel="stylesheet" href="assets/admin-ui.css">
 </head>
-<body class="admin-body">
-    <aside class="admin-sidebar" id="admin-sidebar">
-        <a class="admin-brand" href="dashboard.php">
-            <img src="../assets/images/onisubi-logo.svg" alt="">
-            <span><strong>ONI</strong>SUBI <small>OPERATIONS</small></span>
-        </a>
-        <span class="admin-nav-label">WORKSPACE</span>
-        <nav class="admin-navigation" aria-label="Admin navigation">
+<body>
+    <aside class="sidebar">
+        <div class="brand">
+            <img src="assets/images/onisubi-logo.svg" alt="ONISUBI">
+            <div>
+                ONI<span>SUBI</span>
+                <small>ADMIN PANEL</small>
+            </div>
+        </div>
+        <div class="nav-title">MANAGEMENT</div>
+        <nav class="nav">
             <?php foreach ($adminNavigation as $key => [$label, $href]): ?>
-                <a class="<?= $activePage === $key ? 'is-active' : '' ?>" href="<?= admin_escape($href) ?>" <?= $activePage === $key ? 'aria-current="page"' : '' ?>>
-                    <span class="admin-nav-mark" aria-hidden="true"></span><?= admin_escape($label) ?>
+                <a href="<?= $href ?>" class="<?= $activePage === $key ? 'active' : '' ?>" data-nav="<?= $href ?>">
+                    <i class="dot"></i>
+                    <?= admin_escape($label) ?>
                 </a>
             <?php endforeach; ?>
         </nav>
-        <div class="admin-sidebar-bottom">
-            <a href="https://onisubi.onrender.com/" target="_blank" rel="noopener noreferrer">View Customer Website</a>
-            <span>ONISUBI · ADMIN</span>
+        <div class="bottom">
+            <small><?= admin_escape(strtoupper($adminUser['role'] ?? 'ADMIN')) ?></small>
+            <a href="../pages/auth.php?action=logout" style="display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; font-weight: 700; color: #ffb4a2; text-decoration: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle;">
+                    <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+                    <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+                </svg>
+                Log Out
+            </a>
         </div>
     </aside>
-    <div class="admin-main">
-        <header class="admin-topbar">
-            <button class="admin-menu-toggle" type="button" aria-label="Toggle admin navigation" aria-expanded="false" data-admin-menu-toggle><span></span><span></span></button>
-            <div class="admin-topbar-label"><span class="admin-live-dot"></span> Store operations</div>
-            <div class="admin-user"><span class="admin-user-avatar"><?= admin_escape(strtoupper(substr((string) $adminUser['name'], 0, 1))) ?></span><span><?= admin_escape($adminUser['name']) ?></span><a href="../auth.php?action=logout">Log out</a></div>
+    <main class="main">
+        <header class="top">
+            <b>ONISUBI Admin</b>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="user">
+                    <span class="avatar"><?= admin_escape(strtoupper(substr((string) ($adminUser['name'] ?? 'A'), 0, 1))) ?></span>
+                    <?= admin_escape($adminUser['name'] ?? 'Admin') ?>
+                </div>
+            </div>
         </header>
-        <main class="admin-content">
+        <div class="content">

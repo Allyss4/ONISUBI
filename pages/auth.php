@@ -9,8 +9,19 @@ if ($action === 'logout') {
   exit;
 }
 
+if (current_user_id() && empty($action)) {
+  $stmt = $conn->prepare('SELECT role FROM users WHERE id = :id LIMIT 1');
+  $stmt->execute([':id' => current_user_id()]);
+  $existingRole = strtolower((string) $stmt->fetchColumn());
+  if (in_array($existingRole, ['admin', 'staff'], true)) {
+    header('Location: ../admin/dashboard.php');
+    exit;
+  }
+}
+
 $redirect = $_GET['redirect'] ?? $_POST['redirect'] ?? 'account.php';
-if (!in_array($redirect, ['account.php', 'checkout.php', 'pages/account.php', 'pages/checkout.php'], true)) {
+$allowedRedirects = ['account.php', 'checkout.php', 'pages/account.php', 'pages/checkout.php', 'admin', '../admin/dashboard.php', 'admin/dashboard.php'];
+if (!in_array($redirect, $allowedRedirects, true)) {
     $redirect = 'account.php';
 }
 $msg = $_GET['msg'] ?? '';
@@ -73,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($identifier === '' || (!filter_var($identifier, FILTER_VALIDATE_EMAIL) && !preg_match('/^[A-Za-z0-9_.-]+$/', $identifier))) {
             $error = 'Enter a valid email address or username.';
         } else {
-      $stmt = $conn->prepare('SELECT id, name, email, password_hash FROM users WHERE email = :identifier OR name = :identifier LIMIT 1');
+      $stmt = $conn->prepare('SELECT id, name, email, role, password_hash FROM users WHERE email = :identifier OR name = :identifier LIMIT 1');
       $stmt->execute([':identifier' => $identifier]);
       $user = $stmt->fetch();
 
@@ -87,6 +98,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       if ($user && $passwordMatches) {
         $_SESSION['user_id'] = (int) $user['id'];
+        $role = strtolower((string) ($user['role'] ?? ''));
+        if (in_array($role, ['admin', 'staff'], true)) {
+          header('Location: ../admin/dashboard.php');
+          exit;
+        }
         header('Location: ' . $redirect);
         exit;
       }

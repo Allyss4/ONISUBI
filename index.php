@@ -3,11 +3,32 @@ declare(strict_types=1);
 require_once __DIR__ . '/config/bootstrap.php';
 
 $isLoggedIn = current_user_id() !== null;
+$isAdmin = false;
+if ($isLoggedIn && isset($conn) && $conn instanceof PDO) {
+  try {
+    $roleStmt = $conn->prepare('SELECT role FROM users WHERE id = :id LIMIT 1');
+    $roleStmt->execute([':id' => current_user_id()]);
+    $roleVal = strtolower((string) $roleStmt->fetchColumn());
+    $isAdmin = in_array($roleVal, ['admin', 'staff'], true);
+  } catch (Throwable $e) {
+    $isAdmin = false;
+  }
+}
 $products = [];
 
 if (isset($conn) && $conn instanceof PDO) {
   try {
-    $stmt = $conn->query("SELECT id, name, price, description, image, stock, status FROM products ORDER BY id LIMIT 8");
+    $stmt = $conn->query("
+      SELECT p.id, p.name, p.price, p.description, p.image,
+             COALESCE(i.quantity, p.stock, 0) AS stock,
+             COALESCE(i.low_stock_limit, 5) AS low_stock_limit,
+             p.status
+      FROM products p
+      LEFT JOIN inventory i ON i.product_id = p.id
+      WHERE LOWER(p.status) <> 'deleted'
+      ORDER BY p.id ASC
+      LIMIT 12
+    ");
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
   } catch (Throwable $e) {
     $products = [];
@@ -20,6 +41,16 @@ if (empty($products)) {
     ['id' => 2, 'name' => 'Sizzling Hotdog', 'price' => 40, 'description' => 'A tasty hotdog-filled bite with rich, smoky flavor.', 'image' => 'https://www.sbfoods-worldwide.com/recipes/rst0f40000000t14-img/416_UMAMI_TOPPING_Onigiri_ichiran.jpg'],
     ['id' => 3, 'name' => 'Tuna Mayo', 'price' => 40, 'description' => 'Creamy, savory tuna filling for a classic bite.', 'image' => 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5-EjRHu8gJ2nWryFFe9zgbQhBY7L4A1fH9eJmrOwyLZ9l7tGJzfo_QtQ3&s=10'],
     ['id' => 4, 'name' => 'Egg', 'price' => 40, 'description' => 'Simple, comforting, and filling egg musubi favorite.', 'image' => 'https://japanesecooking101.com/wp-content/uploads/2023/10/IMG_6350.jpeg'],
+  ];
+}
+
+$productStocksMap = [];
+foreach ($products as $p) {
+  $productStocksMap[(int) $p['id']] = [
+    'id' => (int) $p['id'],
+    'name' => (string) $p['name'],
+    'stock' => (int) ($p['stock'] ?? 0),
+    'low_stock_limit' => (int) ($p['low_stock_limit'] ?? 5),
   ];
 }
 // ALLERGENS rice, nori seaweed, luncheon meat, egg, sweet teriyaki sauce
@@ -128,7 +159,7 @@ function getProductExtraDetails(array $product, array $map): array {
         <a href="#menu">Menu</a>
         <a href="#contact">Contact</a>
         <?php if ($isLoggedIn): ?>
-          <a href="pages/account.php" class="mobile-only-link">My Account</a>
+          <a class="account-link" href="<?= 'pages/account.php' ?>"><?= 'My Account' ?></a>
         <?php else: ?>
           <a href="#" class="mobile-only-link" onclick="document.getElementById('login-prompt-modal').hidden = false; return false;">Log In</a>
         <?php endif; ?>
@@ -139,7 +170,7 @@ function getProductExtraDetails(array $product, array $map): array {
           Cart <span id="cart-count">0</span>
         </button>
         <?php if ($isLoggedIn): ?>
-          <a class="account-link" href="pages/account.php">My Account</a>
+          <a class="account-link" href="<?= 'pages/account.php' ?>"><?= 'My Account' ?></a>
         <?php else: ?>
           <button type="button" class="account-link" onclick="document.getElementById('login-prompt-modal').hidden = false;"
             style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
@@ -219,12 +250,19 @@ function getProductExtraDetails(array $product, array $map): array {
 
         <div class="product-grid">
           <?php foreach ($products as $product):
+            $stock = (int) ($product['stock'] ?? 0);
+            $limit = (int) ($product['low_stock_limit'] ?? 5);
+            $isOutOfStock = $stock <= 0;
+            $isLowStock = !$isOutOfStock && $stock <= $limit;
+
             $extra = getProductExtraDetails($product, $productDetailsMap);
             $fullData = [
               'id' => (int) ($product['id'] ?? 0),
               'name' => (string) ($product['name'] ?? ''),
               'price' => (float) ($product['price'] ?? 40.0),
               'image' => (string) ($product['image'] ?? ''),
+              'stock' => $stock,
+              'low_stock_limit' => $limit,
               'description' => $extra['full_description'],
               'short_description' => (string) ($product['description'] ?? ''),
               'ingredients' => $extra['ingredients'],
@@ -233,7 +271,16 @@ function getProductExtraDetails(array $product, array $map): array {
             ];
             $jsonData = json_encode($fullData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
           ?>
-            <article class="product-card" data-product-card data-product-json='<?= $jsonData ?>' tabindex="0" role="button" aria-haspopup="dialog" aria-label="View details for <?= e((string) ($product['name'] ?? '')) ?>">
+            <article class="product-card <?= $isOutOfStock ? 'is-out-of-stock' : '' ?>"
+                     data-product-card
+                     data-product-id="<?= (int) ($product['id'] ?? 0) ?>"
+                     data-stock="<?= $stock ?>"
+                     data-low-limit="<?= $limit ?>"
+                     data-product-json='<?= $jsonData ?>'
+                     tabindex="0"
+                     role="button"
+                     aria-haspopup="dialog"
+                     aria-label="View details for <?= e((string) ($product['name'] ?? '')) ?>">
               <div class="product-img-wrap">
                 <img src="<?= e((string) ($product['image'] ?? '')) ?>" alt="<?= e((string) ($product['name'] ?? '')) ?>" loading="lazy">
                 <span class="product-view-hint">View details</span>
@@ -242,11 +289,25 @@ function getProductExtraDetails(array $product, array $map): array {
                 <div class="rating">★★★★★ <span>4.9</span></div>
                 <h3><?= e((string) ($product['name'] ?? '')) ?></h3>
                 <p><?= e((string) ($product['description'] ?? '')) ?></p>
+                <div class="stock-status-wrap">
+                  <?php if ($isOutOfStock): ?>
+                    <span class="product-stock-tag out-of-stock" data-stock-indicator>Sold Out</span>
+                  <?php elseif ($isLowStock): ?>
+                    <span class="product-stock-tag low-stock" data-stock-indicator>Only <?= $stock ?> left!</span>
+                  <?php else: ?>
+                    <span class="product-stock-tag in-stock" data-stock-indicator>In Stock</span>
+                  <?php endif; ?>
+                </div>
                 <div class="product-bottom">
                   <strong>₱<?= number_format((float) ($product['price'] ?? 0), 2) ?></strong>
-                  <button type="button" class="add-cart" data-add-to-cart data-product-id="<?= (int) ($product['id'] ?? 0) ?>"
-                    data-name="<?= e((string) ($product['name'] ?? '')) ?>" data-price="<?= (float) ($product['price'] ?? 0) ?>"
-                    data-image="<?= e((string) ($product['image'] ?? '')) ?>">Add to cart</button>
+                  <button type="button" class="add-cart" data-add-to-cart
+                    data-product-id="<?= (int) ($product['id'] ?? 0) ?>"
+                    data-name="<?= e((string) ($product['name'] ?? '')) ?>"
+                    data-price="<?= (float) ($product['price'] ?? 0) ?>"
+                    data-image="<?= e((string) ($product['image'] ?? '')) ?>"
+                    <?= $isOutOfStock ? 'disabled' : '' ?>>
+                    <?= $isOutOfStock ? 'Out of Stock' : 'Add to cart' ?>
+                  </button>
                 </div>
               </div>
             </article>
@@ -497,7 +558,12 @@ function getProductExtraDetails(array $product, array $map): array {
       });
     })();
   </script>
-  <script src="assets/js/script.js?v=20260918"></script>
+  <script>
+    window.PRODUCT_STOCKS = <?= json_encode($productStocksMap, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <?= supabase_frontend_config_tag() ?>
+  <script src="assets/js/script.js?v=20261007"></script>
 </body>
 
 </html>

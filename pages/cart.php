@@ -6,9 +6,65 @@ $isLoggedIn = current_user_id() !== null;
 $cartItems = json_decode($_COOKIE['onisubi_cart'] ?? '[]', true);
 $cartItems = is_array($cartItems) ? $cartItems : [];
 
+// Fetch current available stock from products & inventory
+$productStocks = [];
+if (isset($conn) && $conn instanceof PDO) {
+  try {
+    $stmt = $conn->query("
+      SELECT p.id, p.name,
+             COALESCE(i.quantity, p.stock, 0)::int AS stock,
+             COALESCE(i.low_stock_limit, 5)::int AS low_stock_limit,
+             p.status
+      FROM products p
+      LEFT JOIN inventory i ON i.product_id = p.id
+      WHERE LOWER(p.status) <> 'deleted'
+      ORDER BY p.id ASC
+    ");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+      $pid = (int) $row['id'];
+      $productStocks[$pid] = [
+        'id'              => $pid,
+        'name'            => (string) $row['name'],
+        'stock'           => (int) $row['stock'],
+        'low_stock_limit' => (int) $row['low_stock_limit'],
+        'status'          => (string) ($row['status'] ?? 'active'),
+      ];
+    }
+  } catch (Throwable $e) {
+    // fallback empty
+  }
+}
+
+function resolve_item_stock(array $item, array $stocks): int {
+  $pid = (int) ($item['id'] ?? 0);
+  if ($pid > 0 && isset($stocks[$pid])) {
+    return (int) $stocks[$pid]['stock'];
+  }
+  $itemName = strtolower(trim((string) ($item['name'] ?? '')));
+  foreach ($stocks as $stockData) {
+    $prodName = strtolower(trim((string) $stockData['name']));
+    if ($prodName !== '' && (str_contains($itemName, $prodName) || str_contains($prodName, $itemName))) {
+      return (int) $stockData['stock'];
+    }
+  }
+  return 99;
+}
+
+$hasAdjustedStock = false;
 $total = 0.0;
-foreach ($cartItems as $item) {
+foreach ($cartItems as &$item) {
+  $maxStock = resolve_item_stock($item, $productStocks);
+  $qty = (int) ($item['qty'] ?? 1);
+  if ($qty > $maxStock && $maxStock >= 0) {
+    $item['qty'] = max(0, $maxStock);
+    $hasAdjustedStock = true;
+  }
   $total += (float) ($item['price'] ?? 0) * (int) ($item['qty'] ?? 1);
+}
+unset($item);
+
+if ($hasAdjustedStock) {
+  setcookie('onisubi_cart', json_encode($cartItems), time() + 86400, '/');
 }
 ?>
 <!DOCTYPE html>
@@ -80,28 +136,43 @@ foreach ($cartItems as $item) {
                 <td colspan="4" class="empty-cart">Your cart is empty.</td>
               </tr>
             <?php else: ?>
-              <?php foreach ($cartItems as $index => $item): ?>
-                <tr>
+              <?php foreach ($cartItems as $index => $item):
+                $itemQty = (int) ($item['qty'] ?? 1);
+                $maxStock = resolve_item_stock($item, $productStocks);
+                $isOutOfStock = $maxStock <= 0;
+                $isAtMax = $itemQty >= $maxStock;
+              ?>
+                <tr data-cart-row data-cart-index="<?= (int) $index ?>" data-product-id="<?= (int) ($item['id'] ?? 0) ?>" data-max-stock="<?= $maxStock ?>">
                   <td class="cart-product">
                     <img src="<?= e(!empty($item['image']) ? (string) $item['image'] : '../assets/images/onisubi-logo.svg') ?>" alt="<?= e((string) ($item['name'] ?? 'Item')) ?>">
                     <span><?= e((string) ($item['name'] ?? 'Item')) ?></span>
                   </td>
                   <td>
-                    <div class="quantity-control">
-                      <button type="button" data-cart-action="decrease" data-cart-index="<?= (int) $index ?>"
-                        aria-label="Decrease quantity">−</button>
-                      <input type="number" inputmode="numeric" min="0" step="1" value="<?= (int) ($item['qty'] ?? 1) ?>" data-cart-qty-input data-cart-index="<?= (int) $index ?>" aria-label="Set quantity for <?= e((string) ($item['name'] ?? 'Item')) ?>">
-                      <button type="button" data-cart-action="increase" data-cart-index="<?= (int) $index ?>"
-                        aria-label="Increase quantity">+</button>
+                    <div class="cart-qty-wrap">
+                      <div class="quantity-control <?= $isAtMax ? 'at-max-limit' : '' ?>">
+                        <button type="button" data-cart-action="decrease" data-cart-index="<?= (int) $index ?>"
+                          aria-label="Decrease quantity">−</button>
+                        <input type="number" inputmode="numeric" min="0" max="<?= $maxStock ?>" step="1" value="<?= $itemQty ?>" data-cart-qty-input data-cart-index="<?= (int) $index ?>" aria-label="Set quantity for <?= e((string) ($item['name'] ?? 'Item')) ?>">
+                        <button type="button" data-cart-action="increase" data-cart-index="<?= (int) $index ?>"
+                          <?= $isAtMax ? 'disabled' : '' ?>
+                          aria-label="Increase quantity">+</button>
+                      </div>
+                      <?php if ($isOutOfStock): ?>
+                        <span class="cart-stock-notice out-of-stock" data-cart-stock-notice>Out of stock (0 left)</span>
+                      <?php elseif ($isAtMax): ?>
+                        <span class="cart-stock-notice max-reached" data-cart-stock-notice>Max stock reached (<?= $maxStock ?> left)</span>
+                      <?php elseif ($maxStock <= 5): ?>
+                        <span class="cart-stock-notice low-stock" data-cart-stock-notice>Only <?= $maxStock ?> left in stock</span>
+                      <?php endif; ?>
                     </div>
                   </td>
                   <td>₱<?= number_format((float) ($item['price'] ?? 0), 2) ?></td>
-                  <td>₱<?= number_format((float) ($item['price'] ?? 0) * (int) ($item['qty'] ?? 1), 2) ?></td>
+                  <td>₱<?= number_format((float) ($item['price'] ?? 0) * $itemQty, 2) ?></td>
                 </tr>
               <?php endforeach; ?>
-                <?php endif; ?>
-                </tbody>
-                </table>
+            <?php endif; ?>
+          </tbody>
+        </table>
                 <div class="cart-actions">
                   <a class="secondary-btn" href="../index.php#menu">Continue Shopping</a>
                   <a class="btn btn-primary checkout-action" href="checkout.php" data-checkout-link>Checkout</a>
@@ -206,7 +277,11 @@ foreach ($cartItems as $item) {
     </section>
   </div>
 
-  <script src="../assets/js/script.js?v=20260901"></script>
+  <script>
+    window.PRODUCT_STOCKS = <?= json_encode($productStocks, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../assets/js/script.js?v=20261007"></script>
 </body>
 
 </html>

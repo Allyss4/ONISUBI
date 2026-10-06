@@ -45,6 +45,11 @@ $user = $stmt->fetch() ?: [];
     <main class="checkout-page">
         <div class="container checkout-layout">
             <section class="panel">
+                <?php if (isset($_GET['payment']) && $_GET['payment'] === 'cancelled'): ?>
+                    <div style="margin-bottom: 20px; padding: 14px 18px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; color: #b91c1c; font-size: 0.95rem;">
+                        <strong>Payment Cancelled:</strong> Your PayMongo payment was not completed. You can try placing the order again below or choose Cash on Delivery.
+                    </div>
+                <?php endif; ?>
                 <h2>Checkout</h2>
                 <form class="checkout-form" data-checkout-form>
                     <input type="text" name="name" placeholder="Full name" value="<?= e($user['name'] ?? '') ?>" required>
@@ -56,16 +61,16 @@ $user = $stmt->fetch() ?: [];
                         <h3>Payment method</h3>
                         <div class="payment-options" role="radiogroup" aria-label="Payment method">
                             <label class="payment-option selected" data-payment-option>
-                                <input type="radio" name="payment_method" value="GCash QR" checked>
+                                <input type="radio" name="payment_method" value="PayMongo" checked>
                                 <span class="payment-card-content">
                                     <span class="payment-icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-phone-fill" viewBox="0 0 16 16">
-                                            <path d="M3 2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm6 11a1 1 0 1 0-2 0 1 1 0 0 0 2 0"/>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-credit-card-2-front-fill" viewBox="0 0 16 16">
+                                            <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2.5 1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm0 3a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm3 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm3 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm3 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z"/>
                                         </svg>
                                     </span>
                                     <span class="payment-copy">
-                                        <span class="payment-title">Paymongo</span>
-                                        <span class="payment-description">Scan our GCash QR code, pay the exact amount, then upload your receipt</span>
+                                        <span class="payment-title">PayMongo (GCash, Maya, Cards, QRPH)</span>
+                                        <span class="payment-description">Pay instantly and securely online via GCash, Maya, Cards, or QRPH</span>
                                     </span>
                                     <span class="payment-indicator" aria-hidden="true"></span>
                                 </span>
@@ -92,8 +97,8 @@ $user = $stmt->fetch() ?: [];
                         </div>
 
                         <div class="payment-details" aria-live="polite">
-                            <div class="payment-instructions is-visible" data-payment-panel="GCash QR">
-                                <p>After you place your order, you'll see our GCash QR code. Pay the exact total, then upload your receipt screenshot and reference number so we can verify your payment.</p>
+                            <div class="payment-instructions is-visible" data-payment-panel="PayMongo">
+                                <p>When you click "Place Order", you will be securely redirected to PayMongo to pay using GCash, Maya, Credit/Debit Card, or QRPH.</p>
                             </div>
 
                             <div class="payment-instructions" data-payment-panel="Cash on Delivery" hidden>

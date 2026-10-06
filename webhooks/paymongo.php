@@ -55,10 +55,24 @@ if ($eventType !== 'checkout_session.payment.paid') {
 $data = $payload['data']['attributes']['data'] ?? [];
 $orderIdFromMetadata = (int) ($data['attributes']['metadata']['order_id'] ?? 0);
 $referenceNumber = (string) ($data['attributes']['reference_number'] ?? '');
+$paymentId = (string) ($data['id'] ?? '');
+$checkoutSessionId = (string) ($payload['data']['attributes']['data']['id'] ?? '');
 
 $orderId = $orderIdFromMetadata;
-if ($orderId <= 0 && $referenceNumber !== '') {
-    $orderId = (int) preg_replace('/[^0-9]/', '', $referenceNumber);
+if ($orderId <= 0 && ($referenceNumber !== '' || $checkoutSessionId !== '')) {
+    $refStmt = $conn->prepare("SELECT id FROM orders WHERE (NULLIF(:ref, '') IS NOT NULL AND payment_reference = :ref) OR (NULLIF(:cid, '') IS NOT NULL AND paymongo_checkout_id = :cid) LIMIT 1");
+    $refStmt->execute([':ref' => $referenceNumber, ':cid' => $checkoutSessionId]);
+    $matched = (int) $refStmt->fetchColumn();
+    if ($matched > 0) {
+        $orderId = $matched;
+    } elseif (preg_match('/-(\d+)$/', $referenceNumber, $matches)) {
+        $orderId = (int) $matches[1];
+    }
+}
+
+// Fallback to paymentId if referenceNumber is not provided
+if ($referenceNumber === '' && $paymentId !== '') {
+    $referenceNumber = $paymentId;
 }
 
 if ($orderId <= 0) {
@@ -67,10 +81,9 @@ if ($orderId <= 0) {
     exit;
 }
 
-$stmt = $conn->prepare('SELECT id, status, payment_method FROM orders WHERE id = ? LIMIT 1');
-$stmt->bind_param('i', $orderId);
-$stmt->execute();
-$order = $stmt->get_result()->fetch_assoc();
+$stmt = $conn->prepare('SELECT id, status, payment_method, payment_reference, paymongo_checkout_id FROM orders WHERE id = :id LIMIT 1');
+$stmt->execute([':id' => $orderId]);
+$order = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$order) {
     http_response_code(404);
@@ -78,53 +91,69 @@ if (!$order) {
     exit;
 }
 
-if (strtolower((string) $order['status']) === 'paid') {
-    http_response_code(200);
-    echo json_encode(['received' => true, 'status' => 'already_paid']);
-    exit;
-}
-
-if (strtolower((string) $order['payment_method']) !== 'paymongo') {
+$method = strtolower((string) ($order['payment_method'] ?? ''));
+if (!in_array($method, ['paymongo', 'paymongo checkout', 'gcash qr', 'gcash'], true) && strpos($method, 'paymongo') === false) {
     http_response_code(200);
     echo json_encode(['received' => true, 'status' => 'ignored_non_paymongo']);
     exit;
 }
 
-$conn->begin_transaction();
-
-$paidStatus = 'Order Placed';
-$stmt = $conn->prepare('UPDATE orders SET status = ? WHERE id = ? AND status = ?');
-$stmt->bind_param('ssi', $paidStatus, $orderId, $paidStatus);
-$stmt->execute();
-
-if ($stmt->affected_rows === 0) {
-    $conn->rollback();
+if (strtolower((string) $order['status']) === 'paid' || strtolower((string) $order['status']) === 'order placed') {
+    // If already marked paid but reference was missing, ensure reference is saved for admins
+    if (($referenceNumber !== '' && empty($order['payment_reference'])) || ($checkoutSessionId !== '' && empty($order['paymongo_checkout_id']))) {
+        $upRef = $conn->prepare('UPDATE orders SET payment_reference = COALESCE(NULLIF(:pref, \'\'), payment_reference), paymongo_checkout_id = COALESCE(NULLIF(:cid, \'\'), paymongo_checkout_id) WHERE id = :id');
+        $upRef->execute([':pref' => $referenceNumber, ':cid' => $checkoutSessionId, ':id' => $orderId]);
+    }
     http_response_code(200);
-    echo json_encode(['received' => true, 'status' => 'duplicate']);
+    echo json_encode(['received' => true, 'status' => 'already_paid']);
     exit;
 }
 
-$itemStmt = $conn->prepare('SELECT product_id, quantity FROM order_items WHERE order_id = ?');
-$itemStmt->bind_param('i', $orderId);
-$itemStmt->execute();
-$items = $itemStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+try {
+    $conn->beginTransaction();
 
-foreach ($items as $item) {
-    $productId = (int) ($item['product_id'] ?? 0);
-    $quantity = (int) ($item['quantity'] ?? 0);
-    if ($productId <= 0 || $quantity <= 0) {
-        continue;
+    $paidStatus = 'Order Placed';
+    $updateStmt = $conn->prepare('
+        UPDATE orders 
+        SET status = :status, 
+            payment_status = :pstatus,
+            payment_reference = COALESCE(NULLIF(:pref, \'\'), payment_reference),
+            paymongo_checkout_id = COALESCE(NULLIF(:cid, \'\'), paymongo_checkout_id)
+        WHERE id = :id
+    ');
+    $updateStmt->execute([
+        ':status'  => $paidStatus,
+        ':pstatus' => 'paid',
+        ':pref'    => $referenceNumber,
+        ':cid'     => $checkoutSessionId,
+        ':id'      => $orderId,
+    ]);
+
+    $itemStmt = $conn->prepare('SELECT product_id, quantity FROM order_items WHERE order_id = :id');
+    $itemStmt->execute([':id' => $orderId]);
+    $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($items as $item) {
+        $productId = (int) ($item['product_id'] ?? 0);
+        $quantity = (int) ($item['quantity'] ?? 0);
+        if ($productId <= 0 || $quantity <= 0) {
+            continue;
+        }
+
+        $inventoryStmt = $conn->prepare('UPDATE inventory SET quantity = GREATEST(0, quantity - :qty), updated_at = CURRENT_TIMESTAMP WHERE product_id = :id');
+        $inventoryStmt->execute([':qty' => $quantity, ':id' => $productId]);
+
+        $stockStmt = $conn->prepare('UPDATE products SET stock = GREATEST(0, stock - :qty) WHERE id = :id');
+        $stockStmt->execute([':qty' => $quantity, ':id' => $productId]);
     }
 
-    $inventoryStmt = $conn->prepare('UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?');
-    $inventoryStmt->bind_param('ii', $quantity, $productId);
-    $inventoryStmt->execute();
-
-    $stockStmt = $conn->prepare('UPDATE Products SET stock = stock - ? WHERE id = ?');
-    $stockStmt->bind_param('ii', $quantity, $productId);
-    $stockStmt->execute();
+    $conn->commit();
+    http_response_code(200);
+    echo json_encode(['received' => true, 'status' => 'paid']);
+} catch (Throwable $e) {
+    if ($conn->inTransaction()) {
+        $conn->rollBack();
+    }
+    http_response_code(500);
+    echo json_encode(['received' => false, 'error' => $e->getMessage()]);
 }
-
-$conn->commit();
-http_response_code(200);
-echo json_encode(['received' => true, 'status' => 'paid']);

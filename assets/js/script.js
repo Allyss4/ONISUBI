@@ -51,25 +51,58 @@ function updateSummaryUI() {
   }
 }
 
+function getProductStock(item) {
+  if (!item) return 99;
+  const stocks = window.PRODUCT_STOCKS || {};
+  const pid = Number(item.id || item.productId || 0);
+  if (pid > 0 && stocks[pid] !== undefined) {
+    const s = stocks[pid];
+    return typeof s === 'object' && s !== null ? Number(s.stock ?? 0) : Number(s);
+  }
+  if (item.name) {
+    const rawName = item.name.split('(')[0].trim().toLowerCase();
+    for (const [id, data] of Object.entries(stocks)) {
+      const pName = (typeof data === 'object' && data ? data.name : '').toLowerCase();
+      if (pName && (pName === rawName || rawName.includes(pName) || pName.includes(rawName))) {
+        return typeof data === 'object' && data ? Number(data.stock ?? 0) : Number(data);
+      }
+    }
+  }
+  return 99;
+}
+
 function addToCart(name, price, productId, image, qty = 1, optionsNote = '') {
   const items = getCartItems();
   const displayName = optionsNote ? `${name} (${optionsNote})` : name;
   const existing = items.find((item) => item.name === displayName);
   const quantityToAdd = Math.max(1, Number(qty || 1));
+  const pid = Number(productId);
+  const maxStock = getProductStock({ id: pid, name });
+
+  if (maxStock <= 0) {
+    showCartProcessingPopup('Out of Stock', `${name} is currently out of stock.`);
+    return false;
+  }
 
   if (existing) {
-    existing.qty += quantityToAdd;
+    if (existing.qty >= maxStock) {
+      showCartProcessingPopup('Limit Reached', `Only ${maxStock} item(s) available in stock.`);
+      return false;
+    }
+    const newQty = Math.min(maxStock, existing.qty + quantityToAdd);
+    existing.qty = newQty;
   } else {
     items.push({
-      id: Number(productId),
+      id: pid,
       name: displayName,
       price: Number(price),
       image,
-      qty: quantityToAdd
+      qty: Math.min(maxStock, quantityToAdd)
     });
   }
 
   saveCartItems(items);
+  return true;
 }
 
 function getCartTotal() {
@@ -98,10 +131,27 @@ function openOrderConfirmModal() {
     return;
   }
 
+  const items = getCartItems();
+  const overStockItem = items.find((item) => {
+    const stock = getProductStock(item);
+    return stock <= 0 || item.qty > stock;
+  });
+
+  if (overStockItem) {
+    const stock = getProductStock(overStockItem);
+    showCartProcessingPopup(
+      'Stock Limit',
+      stock <= 0
+        ? `"${overStockItem.name}" is out of stock. Please remove it before proceeding.`
+        : `Only ${stock} of "${overStockItem.name}" available. Please adjust quantity.`
+    );
+    return;
+  }
+
   const modal = document.getElementById('order-confirm-modal');
   if (!modal) return;
   modal.hidden = false;
-  modal.querySelector('[data-confirm-items]').innerHTML = getCartItems().map((item) => `<div><span>${item.name} &times; ${item.qty}</span><strong>${formatPeso(item.price * item.qty)}</strong></div>`).join('');
+  modal.querySelector('[data-confirm-items]').innerHTML = items.map((item) => `<div><span>${item.name} &times; ${item.qty}</span><strong>${formatPeso(item.price * item.qty)}</strong></div>`).join('');
   modal.querySelector('[data-confirm-total]').textContent = formatPeso(total);
 }
 
@@ -153,7 +203,8 @@ addButtons.forEach((button) => {
     const name = button.dataset.name;
     const price = button.dataset.price;
 
-    addToCart(name, price, button.dataset.productId, button.dataset.image, 1);
+    const added = addToCart(name, price, button.dataset.productId, button.dataset.image, 1);
+    if (!added) return;
     const originalText = button.textContent;
     button.textContent = 'Added ✓';
     button.disabled = true;
@@ -174,9 +225,10 @@ if (newsletterForm) {
   });
 }
 
+let renderCart = null;
 const cartTableBody = document.querySelector('[data-cart-items]');
 if (cartTableBody) {
-  const renderCart = () => {
+  renderCart = () => {
     const items = getCartItems();
     if (!items.length) {
       cartTableBody.innerHTML = `
@@ -185,22 +237,73 @@ if (cartTableBody) {
             </tr>
         `;
     } else {
-      cartTableBody.innerHTML = items.map((item, index) => `
-            <tr>
-                <td class="cart-product"><img src="${escapeHtml(item.image || `${BASE_PATH}assets/images/onisubi-logo.svg`)}" alt="${escapeHtml(item.name || '')}"><span>${escapeHtml(item.name)}</span></td>
-                <td><div class="quantity-control"><button type="button" data-cart-action="decrease" data-cart-index="${index}" aria-label="Decrease quantity">−</button><input type="number" inputmode="numeric" min="0" step="1" value="${Number(item.qty || 1)}" data-cart-qty-input data-cart-index="${index}" aria-label="Set quantity for ${escapeHtml(item.name)}"><button type="button" data-cart-action="increase" data-cart-index="${index}" aria-label="Increase quantity">+</button></div></td>
-                <td>${formatPeso(item.price)}</td>
-                <td>${formatPeso(item.price * item.qty)}</td>
-            </tr>
-        `).join('');
+      let hasAdjusted = false;
+      cartTableBody.innerHTML = items.map((item, index) => {
+        const maxStock = getProductStock(item);
+        let qty = Number(item.qty || 1);
+        if (qty > maxStock && maxStock >= 0) {
+          qty = Math.max(0, maxStock);
+          item.qty = qty;
+          hasAdjusted = true;
+        }
+        const isOutOfStock = maxStock <= 0;
+        const isAtMax = qty >= maxStock;
+
+        let stockNoticeHtml = '';
+        if (isOutOfStock) {
+          stockNoticeHtml = `<span class="cart-stock-notice out-of-stock" data-cart-stock-notice>Out of stock (0 left)</span>`;
+        } else if (isAtMax) {
+          stockNoticeHtml = `<span class="cart-stock-notice max-reached" data-cart-stock-notice>Max stock reached (${maxStock} left)</span>`;
+        } else if (maxStock <= 5) {
+          stockNoticeHtml = `<span class="cart-stock-notice low-stock" data-cart-stock-notice>Only ${maxStock} left in stock</span>`;
+        }
+
+        return `
+          <tr data-cart-row data-cart-index="${index}" data-product-id="${Number(item.id || 0)}" data-max-stock="${maxStock}">
+              <td class="cart-product"><img src="${escapeHtml(item.image || `${BASE_PATH}assets/images/onisubi-logo.svg`)}" alt="${escapeHtml(item.name || '')}"><span>${escapeHtml(item.name)}</span></td>
+              <td>
+                <div class="cart-qty-wrap">
+                  <div class="quantity-control ${isAtMax ? 'at-max-limit' : ''}">
+                    <button type="button" data-cart-action="decrease" data-cart-index="${index}" aria-label="Decrease quantity">−</button>
+                    <input type="number" inputmode="numeric" min="0" max="${maxStock}" step="1" value="${qty}" data-cart-qty-input data-cart-index="${index}" aria-label="Set quantity for ${escapeHtml(item.name)}">
+                    <button type="button" data-cart-action="increase" data-cart-index="${index}" ${isAtMax ? 'disabled' : ''} aria-label="Increase quantity">+</button>
+                  </div>
+                  ${stockNoticeHtml}
+                </div>
+              </td>
+              <td>${formatPeso(item.price)}</td>
+              <td>${formatPeso(item.price * qty)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      if (hasAdjusted) {
+        saveCartItems(items);
+        showCartProcessingPopup('Inventory Updated', 'Cart quantities adjusted to available product stock.');
+      }
     }
 
     cartTableBody.querySelectorAll('[data-cart-action]').forEach((button) => button.addEventListener('click', () => {
-      const items = getCartItems(); const index = Number(button.dataset.cartIndex); const action = button.dataset.cartAction;
+      const items = getCartItems();
+      const index = Number(button.dataset.cartIndex);
+      const action = button.dataset.cartAction;
       if (!items[index]) return;
-      items[index].qty += action === 'increase' ? 1 : -1;
-      if (items[index].qty <= 0) items.splice(index, 1);
-      saveCartItems(items); renderCart();
+
+      const maxStock = getProductStock(items[index]);
+
+      if (action === 'increase') {
+        if (items[index].qty >= maxStock) {
+          showCartProcessingPopup('Limit Reached', `Only ${maxStock} item(s) left in stock for ${items[index].name}.`);
+          return;
+        }
+        items[index].qty += 1;
+      } else {
+        items[index].qty -= 1;
+        if (items[index].qty <= 0) items.splice(index, 1);
+      }
+
+      saveCartItems(items);
+      renderCart();
     }));
 
     cartTableBody.querySelectorAll('[data-cart-qty-input]').forEach((input) => {
@@ -209,6 +312,7 @@ if (cartTableBody) {
         const index = Number(input.dataset.cartIndex);
         if (!items[index]) return;
 
+        const maxStock = getProductStock(items[index]);
         const rawValue = input.value.trim();
         const parsedValue = Number(rawValue);
 
@@ -224,8 +328,16 @@ if (cartTableBody) {
           return;
         }
 
-        items[index].qty = Math.min(99, parsedValue);
-        saveCartItems(items); renderCart();
+        if (parsedValue > maxStock) {
+          items[index].qty = maxStock;
+          input.value = maxStock;
+          showCartProcessingPopup('Limit Reached', `Only ${maxStock} item(s) available in stock. Quantity adjusted.`);
+        } else {
+          items[index].qty = parsedValue;
+        }
+
+        saveCartItems(items);
+        renderCart();
       });
     });
   };
@@ -285,14 +397,36 @@ if (checkoutForm) {
       return;
     }
 
-    const formData = new FormData(checkoutForm);
-    formData.append('cart', JSON.stringify(getCartItems()));
-    const response = await fetch(BASE_PATH + 'api/create-order.php', { method: 'POST', body: formData });
-    const result = await response.json();
-    if (!response.ok) { alert(result.error || 'Unable to create the order.'); return; }
-    localStorage.removeItem(CART_KEY);
-    document.cookie = 'onisubi_cart=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    window.location.href = result.checkout_url;
+    const submitBtn = checkoutForm.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn ? submitBtn.textContent : 'Place Order';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Redirecting to payment...';
+    }
+
+    try {
+      const formData = new FormData(checkoutForm);
+      formData.append('cart', JSON.stringify(getCartItems()));
+      const response = await fetch(BASE_PATH + 'api/create-order.php', { method: 'POST', body: formData });
+      const result = await response.json();
+      if (!response.ok) {
+        alert(result.error || 'Unable to create the order.');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
+        return;
+      }
+      localStorage.removeItem(CART_KEY);
+      document.cookie = 'onisubi_cart=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      window.location.href = result.checkout_url;
+    } catch (err) {
+      alert('Network error while processing checkout. Please try again.');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+    }
   });
 }
 
@@ -818,12 +952,13 @@ function initProductDetailModal() {
 
     updatePrice();
 
-    // Reset Add to Cart button state
+    // Reset Add to Cart button state based on stock
     if (addCartBtn) {
+      const isOut = Number(data.stock ?? 1) <= 0;
       addCartBtn.classList.remove('is-success');
       const btnText = addCartBtn.querySelector('.btn-text');
-      if (btnText) btnText.textContent = 'Add to Cart';
-      addCartBtn.disabled = false;
+      if (btnText) btnText.textContent = isOut ? 'Out of Stock' : 'Add to Cart';
+      addCartBtn.disabled = isOut;
     }
 
     modal.hidden = false;
@@ -863,10 +998,13 @@ function initProductDetailModal() {
 
   if (qtyPlusBtn) {
     qtyPlusBtn.addEventListener('click', () => {
-      if (currentQty < 99) {
+      const maxStock = currentProduct ? getProductStock(currentProduct) : 99;
+      if (currentQty < maxStock) {
         currentQty += 1;
         if (qtyValueEl) qtyValueEl.textContent = currentQty;
         updatePrice();
+      } else {
+        showCartProcessingPopup('Limit Reached', `Only ${maxStock} item(s) available in stock.`);
       }
     });
   }
@@ -874,6 +1012,22 @@ function initProductDetailModal() {
   if (addCartBtn) {
     addCartBtn.addEventListener('click', () => {
       if (!currentProduct) return;
+      const maxStock = getProductStock(currentProduct);
+      if (maxStock <= 0) {
+        showCartProcessingPopup('Out of Stock', `${currentProduct.name} is currently out of stock.`);
+        return;
+      }
+
+      const existing = getCartItems().find((item) => Number(item.id) === Number(currentProduct.id));
+      const inCartQty = existing ? Number(existing.qty || 0) : 0;
+      if (inCartQty + currentQty > maxStock) {
+        const canAdd = Math.max(0, maxStock - inCartQty);
+        if (canAdd <= 0) {
+          showCartProcessingPopup('Limit Reached', `You already have all ${maxStock} available item(s) in your cart.`);
+          return;
+        }
+      }
+
       const { unitPrice } = updatePrice();
 
       const customParts = [];
@@ -881,7 +1035,8 @@ function initProductDetailModal() {
       selectedAddons.forEach((a) => customParts.push(a.name));
       const optionsNote = customParts.join(', ');
 
-      addToCart(currentProduct.name, unitPrice, currentProduct.id, currentProduct.image, currentQty, optionsNote);
+      const success = addToCart(currentProduct.name, unitPrice, currentProduct.id, currentProduct.image, currentQty, optionsNote);
+      if (!success) return;
 
       addCartBtn.classList.add('is-success');
       const btnText = addCartBtn.querySelector('.btn-text');
@@ -924,9 +1079,142 @@ function initProductDetailModal() {
   });
 }
 
+function initRealtimeInventorySync() {
+  const cfg = window.SUPABASE_CONFIG || {
+    url: 'https://ghrexntoqduadflakijc.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdocmV4bnRvcWR1YWRmbGFraWpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjMyNjgsImV4cCI6MjEwNDQzOTI2OH0.CxORa-VSGILFmJF3T4BS_ZHSElVQ6FdStXv51XPBFeg'
+  };
+
+  if (!window.supabase) {
+    console.warn('Supabase SDK not loaded yet for realtime inventory.');
+    return;
+  }
+
+  const sb = window.supabase.createClient(cfg.url, cfg.anonKey);
+
+  function applyProductStockUpdate(productId, newStock, lowStockLimit) {
+    const pid = Number(productId);
+    const qty = Number(newStock);
+    if (!window.PRODUCT_STOCKS) window.PRODUCT_STOCKS = {};
+    const existingEntry = window.PRODUCT_STOCKS[pid];
+    window.PRODUCT_STOCKS[pid] = typeof existingEntry === 'object' && existingEntry !== null
+      ? { ...existingEntry, stock: qty }
+      : { id: pid, stock: qty };
+
+    if (typeof renderCart === 'function') {
+      renderCart();
+    }
+
+    const card = document.querySelector(`article[data-product-card][data-product-id="${productId}"]`);
+    if (!card) return;
+
+    const limit = lowStockLimit !== undefined ? Number(lowStockLimit) : (Number(card.dataset.lowLimit) || 5);
+    const isOutOfStock = qty <= 0;
+    const isLowStock = !isOutOfStock && qty <= limit;
+
+    // 1. Update in-memory data JSON
+    try {
+      if (card.dataset.productJson) {
+        const data = JSON.parse(card.dataset.productJson);
+        data.stock = qty;
+        data.low_stock_limit = limit;
+        card.dataset.productJson = JSON.stringify(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    card.dataset.stock = String(qty);
+
+    // 2. Update stock status tag
+    const badgeWrap = card.querySelector('.stock-status-wrap');
+    if (badgeWrap) {
+      let badgeHtml = '';
+      if (isOutOfStock) {
+        badgeHtml = '<span class="product-stock-tag out-of-stock" data-stock-indicator>Sold Out</span>';
+      } else if (isLowStock) {
+        badgeHtml = `<span class="product-stock-tag low-stock" data-stock-indicator>Only ${qty} left!</span>`;
+      } else {
+        badgeHtml = '<span class="product-stock-tag in-stock" data-stock-indicator>In Stock</span>';
+      }
+      badgeWrap.innerHTML = badgeHtml;
+    }
+
+    // 3. Update out of stock classes and buttons
+    if (isOutOfStock) {
+      card.classList.add('is-out-of-stock');
+    } else {
+      card.classList.remove('is-out-of-stock');
+    }
+
+    const addBtn = card.querySelector('[data-add-to-cart]');
+    if (addBtn) {
+      addBtn.disabled = isOutOfStock;
+      addBtn.textContent = isOutOfStock ? 'Out of Stock' : 'Add to cart';
+    }
+
+    // 4. Trigger visual pulse
+    card.classList.remove('stock-updated-pulse');
+    void card.offsetWidth; // force reflow
+    card.classList.add('stock-updated-pulse');
+    setTimeout(() => card.classList.remove('stock-updated-pulse'), 1000);
+
+    // 5. If modal is currently open for this product, update modal in real time
+    const modal = document.getElementById('product-detail-modal');
+    if (modal && !modal.hidden) {
+      const modalBtn = document.getElementById('modal-add-to-cart-btn');
+      if (modalBtn) {
+        const btnText = modalBtn.querySelector('.btn-text');
+        if (isOutOfStock) {
+          modalBtn.disabled = true;
+          if (btnText) btnText.textContent = 'Out of Stock';
+        } else {
+          modalBtn.disabled = false;
+          if (btnText) btnText.textContent = 'Add to Cart';
+        }
+      }
+    }
+  }
+
+  // Subscribe to real-time changes
+  sb.channel('public-website-inventory')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, (payload) => {
+      const row = payload.new;
+      if (row && row.product_id) {
+        applyProductStockUpdate(row.product_id, row.quantity, row.low_stock_limit);
+      }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+      const row = payload.new;
+      if (row && row.id) {
+        applyProductStockUpdate(row.id, row.stock);
+      }
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('⚡ ONISUBI Real-Time Inventory Sync: Active & Connected to Supabase');
+      }
+    });
+}
+
 function initApp() {
   initMobileMenu();
   initProductDetailModal();
+  initRealtimeInventorySync();
+
+  if (!window.PRODUCT_STOCKS || Object.keys(window.PRODUCT_STOCKS).length === 0) {
+    fetch(BASE_PATH + 'api/get-stock.php')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && data.stocks) {
+          window.PRODUCT_STOCKS = Object.assign({}, window.PRODUCT_STOCKS, data.stocks);
+          if (typeof renderCart === 'function') {
+            renderCart();
+          }
+        }
+      })
+      .catch(() => {});
+  }
 }
 
 if (document.readyState === "loading") {

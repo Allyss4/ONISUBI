@@ -1,20 +1,21 @@
-ONISUBI ADMIN UI ONLY
-======================
+ONISUBI ADMIN SYSTEM
+====================
 
-This package contains UI only. It has NO PHP, MySQL, Supabase, API, login authentication,
-database connection, or live order/customer data.
+The ONISUBI Admin Panel is fully powered by unified PHP files integrated with Supabase RPCs and PostgreSQL:
 
-Open index.html in a browser to view the admin dashboard.
+1. Unified Architecture:
+   - Each page is an authenticated PHP file with server-side data rendering and live Supabase client synchronization.
+   - Guarded by admin_require_user() in config/admin.php.
 
-Included UI pages:
-- Dashboard
-- Customers
-- Staff & Admins
-- Orders
-- Products
-- Inventory
-- Customer Reviews
-- Payment Settings
+2. Management Modules:
+   - dashboard.php: Store overview, sales metrics, recent orders, inventory watch.
+   - customers.php: Customer accounts, spending totals, order history, profile view.
+   - staff.php: Staff and administrator directory, role management.
+   - orders.php: Orders management, real-time status updates (RPC), customer & items breakdown.
+   - products.php: Menu catalog, add/edit products, pricing, stock levels, image URLs.
+   - inventory.php: Real-time stock counts, quick adjustment (+/-), low-stock alert thresholds.
+   - reports.php: Customer verified purchase reviews, 5-star ratings, feedback comments.
+   - payment-settings.php: GCash mobile number, account name, QR code, payment method toggles.
 
-All displayed records are SAMPLE/DEMO data. The eye buttons show demo details.
-The UI can later be connected to your real database by your developer.
+3. Static .html redirects:
+   - Legacy .html files automatically forward to their corresponding .php files.

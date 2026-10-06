@@ -9,7 +9,9 @@ $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
 $dotenv->load();
 
 session_start();
+date_default_timezone_set('Asia/Manila');
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/supabase.php';
 require_once __DIR__ . '/paymongo.php';
 
 function e(string $value): string
@@ -28,6 +30,25 @@ function current_user_id(): ?int
 {
   return isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
 }
+
+function is_admin(?int $userId = null): bool
+{
+    $uid = $userId ?? current_user_id();
+    if (!$uid) {
+        return false;
+    }
+    if (isset($_SESSION['role']) && in_array(strtolower((string) $_SESSION['role']), ['admin', 'staff'], true)) {
+        return true;
+    }
+    if (isset($GLOBALS['conn'])) {
+        $stmt = $GLOBALS['conn']->prepare('SELECT role FROM users WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $uid]);
+        $role = strtolower((string) ($stmt->fetchColumn() ?: ''));
+        return in_array($role, ['admin', 'staff'], true);
+    }
+    return false;
+}
+
 
 function require_login(string $redirect = 'pages/account.php', string $message = ''): int {
     $id = current_user_id(); 
