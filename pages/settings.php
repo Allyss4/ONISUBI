@@ -104,9 +104,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           Cart <span id="cart-count">0</span>
         </button>
         <?php if ($userId): ?>
-          <a class="secondary-btn" href="auth.php?action=logout">Log Out</a>
+          <a class="secondary-btn desktop-only-btn" href="auth.php?action=logout">Log Out</a>
         <?php else: ?>
-          <a class="secondary-btn" href="auth.php?redirect=settings.php">Log In</a>
+          <a class="secondary-btn desktop-only-btn" href="auth.php?redirect=settings.php">Log In</a>
         <?php endif; ?>
         <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="main-nav">
           <span class="hamburger-bar"></span>

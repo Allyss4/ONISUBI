@@ -131,11 +131,8 @@ if ($orderId) {
 }
 
 $availableStatuses = ['Order Placed', 'Preparing', 'Out for Delivery', 'Delivered'];
-$currentStatus = $order['status'] ?? 'Order Placed';
-$currentIndex = array_search($currentStatus, $availableStatuses, true);
-if ($currentIndex === false) {
-    $currentIndex = 0;
-}
+$currentTracking = $order ? map_order_status_to_tracking($order['status'] ?? '') : null;
+$currentIndex = $currentTracking ? $currentTracking['index'] : 0;
 
 $subTotal = (float) ($order['total'] ?? 0);
 $deliveryFee = 0.0;
@@ -194,7 +191,7 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
             <?php else: ?>
                 <div class="status-card">
                     <div class="status-header">
-                        <h2>Order Confirmed!</h2>
+                        <h2>Order Confirmed</h2>
                         <p>Thank you for your order. Your meal is on the way.</p>
                     </div>
 
@@ -231,13 +228,13 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
                             </div>
                             <div class="receipt-detail-box">
                                 <span>Payment Reference</span>
-                                <p style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                <p class="receipt-ref-line" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
                                     <?php $activeRef = (string) ($order['payment_reference'] ?: $order['paymongo_checkout_id'] ?: ''); ?>
                                     <?php if ($activeRef !== ''): ?>
-                                        <strong style="font-family: monospace; font-size: 0.95rem; color: var(--subi); word-break: break-all;"><?= e($activeRef) ?></strong>
-                                        <button type="button" class="btn-copy-ref" onclick="navigator.clipboard.writeText('<?= e(addslashes($activeRef)) ?>'); this.innerText='Copied!'; setTimeout(() => this.innerText='Copy', 1500);" style="background: rgba(240, 146, 26, 0.15); border: 1px solid rgba(240, 146, 26, 0.3); color: var(--subi); padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">Copy</button>
+                                        <strong style="font-family: monospace; font-size: 0.82rem; color: var(--subi); word-break: break-all;"><?= e($activeRef) ?></strong>
+                                        <button type="button" class="btn-copy-ref" onclick="navigator.clipboard.writeText('<?= e(addslashes($activeRef)) ?>'); this.innerText='Copied!'; setTimeout(() => this.innerText='Copy', 1500);" style="background: rgba(240, 146, 26, 0.15); border: 1px solid rgba(240, 146, 26, 0.3); color: var(--subi); padding: 2px 6px; border-radius: 5px; font-size: 0.68rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">Copy</button>
                                     <?php else: ?>
-                                        <span style="color: var(--muted); font-size: 0.88rem; font-style: italic;">Not provided</span>
+                                        <span style="color: var(--muted); font-size: 0.8rem; font-style: italic;">Not provided</span>
                                     <?php endif; ?>
                                 </p>
                             </div>
@@ -254,35 +251,6 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
                                 </p>
                             </div>
                         </div>
-
-                        <?php if (empty($order['payment_reference']) && empty($order['paymongo_checkout_id'])): ?>
-                            <div class="paymongo-ref-box" style="margin: 20px 0; padding: 18px 20px; background: rgba(240, 146, 26, 0.08); border: 1px dashed rgba(240, 146, 26, 0.4); border-radius: 14px;">
-                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                                    <strong style="color: var(--subi); font-size: 0.95rem;">Have a PayMongo Reference ID?</strong>
-                                    <span style="font-size: 0.72rem; background: var(--subi); color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Admin Reference</span>
-                                </div>
-                                <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; line-height: 1.4;">
-                                    If you paid via PayMongo, please provide your payment reference number below so administrators can verify your payment immediately.
-                                </p>
-                                <form method="post" action="order-status.php?id=<?= (int)$order['id'] ?>" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                    <input type="hidden" name="action" value="save_payment_reference">
-                                    <input type="text" name="payment_reference" placeholder="e.g. pm_ref_123456 or GCash Ref #" required style="flex: 1; min-width: 220px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.9rem; background: #fff;">
-                                    <button type="submit" class="btn btn-primary" style="padding: 9px 20px; font-size: 0.85rem; border-radius: 8px; font-weight: 700; cursor: pointer;">Save Reference</button>
-                                </form>
-                            </div>
-                        <?php else: ?>
-                            <div class="paymongo-ref-verified" style="margin: 20px 0; padding: 14px 20px; background: #e4f1e5; border: 1px solid #c2e2c6; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-                                <div>
-                                    <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: #38603f; letter-spacing: 0.05em;">Admin Reference Linked</div>
-                                    <div style="font-size: 0.92rem; color: #1e3a24; margin-top: 3px;">
-                                        PayMongo Reference: <strong style="font-family: monospace; font-size: 1rem; color: #1e3a24;"><?= e((string)($order['payment_reference'] ?: $order['paymongo_checkout_id'])) ?></strong>
-                                    </div>
-                                </div>
-                                <div style="font-size: 0.78rem; color: #38603f; font-weight: 700; background: #fff; padding: 5px 12px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
-                                    ✓ Admin Verification Ready
-                                </div>
-                            </div>
-                        <?php endif; ?>
 
                         <div class="receipt-detail-box">
                             <span>Order details</span>
@@ -320,6 +288,59 @@ $paymentStatus = $order['payment_method'] ?? 'PayMongo';
         </div>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <?= supabase_frontend_config_tag() ?>
     <script src="../assets/js/script.js"></script>
+    <?php if ($order): ?>
+    <script>
+      (function() {
+        const ORDER_ID = <?= (int) $order['id'] ?>;
+        async function checkOrderStatus() {
+          try {
+            const res = await fetch(`order-status.php?id=${ORDER_ID}&format=json&_t=${Date.now()}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data || !data.status) return;
+
+            // Map status
+            const raw = (data.status || '').toLowerCase();
+            let idx = 0;
+            if (['delivered', 'completed'].includes(raw)) idx = 3;
+            else if (['out for delivery', 'out_for_delivery', 'in transit'].includes(raw)) idx = 2;
+            else if (['preparing', 'ready', 'processing'].includes(raw)) idx = 1;
+
+            const steps = document.querySelectorAll('.status-flow-step');
+            steps.forEach((step, i) => {
+              if (i <= idx) step.classList.add('active');
+              else step.classList.remove('active');
+            });
+
+            // Update status text in receipt
+            const statusP = document.querySelectorAll('.receipt-detail-box p');
+            if (statusP && statusP[1]) {
+              statusP[1].textContent = data.status;
+            }
+          } catch(e) {
+            console.warn(e);
+          }
+        }
+
+        if (window.supabase && typeof window.supabase.createClient === 'function' && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+          try {
+            const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+            sb.channel('order-live-' + ORDER_ID)
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `id=eq.${ORDER_ID}` }, () => {
+                checkOrderStatus();
+              })
+              .subscribe();
+          } catch(e) {}
+        }
+
+        <?php if ($currentIndex < 3): ?>
+          setInterval(checkOrderStatus, 5000);
+        <?php endif; ?>
+      })();
+    </script>
+    <?php endif; ?>
 </body>
 </html>

@@ -159,9 +159,9 @@ function getProductExtraDetails(array $product, array $map): array {
         <a href="#menu">Menu</a>
         <a href="#contact">Contact</a>
         <?php if ($isLoggedIn): ?>
-          <a class="account-link" href="pages/account.php">My Account</a>
+          <a class="account-link mobile-only-link" href="pages/account.php">My Account</a>
         <?php else: ?>
-          <a href="pages/auth.php?redirect=index.php" class="mobile-only-link">Log In</a>
+          <a href="#" class="mobile-only-link" onclick="openLoginModal(); return false;">Log In</a>
         <?php endif; ?>
       </nav>
 
@@ -172,7 +172,8 @@ function getProductExtraDetails(array $product, array $map): array {
         <?php if ($isLoggedIn): ?>
           <a class="account-link" href="pages/account.php">My Account</a>
         <?php else: ?>
-          <a class="account-link" href="pages/auth.php?redirect=index.php">Log In</a>
+          <button type="button" class="account-link" onclick="openLoginModal();"
+            style="background:none; border:none; cursor:pointer; font-size:inherit; font-family:inherit;">Log In</button>
         <?php endif; ?>
         <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="main-nav">
           <span class="hamburger-bar"></span>
@@ -418,6 +419,81 @@ function getProductExtraDetails(array $product, array $map): array {
 
 
 
+  <!-- Login/Register Modal -->
+  <div id="login-prompt-modal" class="modal-backdrop" hidden>
+    <section class="confirm-modal auth-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="login-prompt-title" style="max-height: 90vh; overflow-y: auto;">
+      <button class="modal-close" type="button" onclick="document.getElementById('login-prompt-modal').hidden = true;" aria-label="Close">&times;</button>
+      <span class="eyebrow">Welcome</span>
+      <h2 id="login-prompt-title">Enter your email to continue</h2>
+
+      <form class="checkout-form magic-auth-form" method="post" action="pages/auth.php" style="margin-top: 16px;">
+        <!-- Step 1 -->
+        <div class="auth-step-1">
+          <div class="modal-field-group">
+            <label for="modal-email-check">Email address</label>
+            <input type="email" id="modal-email-check" name="email_check" class="auth-email-input" placeholder="you@example.com" required>
+          </div>
+          <button type="button" class="btn btn-primary auth-continue-btn" style="width: 100%;">Continue</button>
+        </div>
+
+        <!-- Step 2 (Login) -->
+        <div class="auth-step-login" hidden>
+          <input type="hidden" name="action" value="login" disabled>
+          <input type="hidden" name="redirect" value="index.php">
+          <input type="hidden" name="email" class="auth-email-hidden" disabled>
+
+          <div class="auth-modal-user-bar">
+            <strong class="auth-email-display"></strong>
+            <button type="button" class="text-link auth-back-btn">Change</button>
+          </div>
+
+          <div class="modal-field-group">
+            <label for="modal-login-password">Password</label>
+            <input type="password" id="modal-login-password" name="password" placeholder="••••••••" required disabled>
+          </div>
+          <button class="btn btn-primary" type="submit" style="width: 100%;">Log in</button>
+          <p style="margin-top: 16px; text-align: center;">
+            <a class="text-link" href="pages/reset-password.php">Forgot or reset password?</a>
+          </p>
+        </div>
+
+        <!-- Step 2 (Register) -->
+        <div class="auth-step-register" hidden>
+          <input type="hidden" name="action" value="register" disabled>
+          <input type="hidden" name="redirect" value="index.php">
+          <input type="hidden" name="email" class="auth-email-hidden" disabled>
+
+          <div class="auth-modal-user-bar">
+            <strong class="auth-email-display"></strong>
+            <button type="button" class="text-link auth-back-btn">Change</button>
+          </div>
+
+          <div class="modal-field-group">
+            <label for="modal-reg-name">Full name</label>
+            <input type="text" id="modal-reg-name" name="name" placeholder="Juan Dela Cruz" required disabled>
+          </div>
+
+          <div class="modal-field-group">
+            <label for="modal-reg-phone">Phone number</label>
+            <input type="tel" id="modal-reg-phone" name="phone" placeholder="09123456789" required disabled>
+          </div>
+
+          <div class="modal-field-group">
+            <label for="modal-reg-address">Delivery address</label>
+            <textarea id="modal-reg-address" name="address" rows="2" placeholder="House #, Street, City" required disabled></textarea>
+          </div>
+
+          <div class="modal-field-group">
+            <label for="modal-reg-password">Password (8+ characters)</label>
+            <input type="password" id="modal-reg-password" name="password" minlength="8" placeholder="••••••••" required disabled>
+          </div>
+
+          <button class="btn btn-primary auth-submit-btn" type="submit" style="width: 100%;">Create account</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
   <!-- Interactive Product Detail Modal -->
   <div id="product-detail-modal" class="modal-backdrop product-modal-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
     <div class="product-modal-dialog">
@@ -507,6 +583,18 @@ function getProductExtraDetails(array $product, array $map): array {
     })();
   </script>
   <script>
+    function openLoginModal() {
+      var modal = document.getElementById('login-prompt-modal');
+      if (modal) modal.hidden = false;
+    }
+    (function () {
+      var modal = document.getElementById('login-prompt-modal');
+      if (modal) {
+        modal.addEventListener('click', function (e) {
+          if (e.target === modal) modal.hidden = true;
+        });
+      }
+    })();
     window.PRODUCT_STOCKS = <?= json_encode($productStocksMap, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

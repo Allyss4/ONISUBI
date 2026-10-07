@@ -112,11 +112,79 @@ function paymongo_request(string $method, string $path, ?array $body = null): ar
     
     $data = json_decode((string) $response, true);
     if ($code < 200 || $code >= 300 || !is_array($data)) {
-    $message = is_array($data) && isset($data['errors'][0]['detail'])
-      ? (string) $data['errors'][0]['detail']
-      : 'PayMongo request failed.';
+        $message = is_array($data) && isset($data['errors'][0]['detail'])
+            ? (string) $data['errors'][0]['detail']
+            : 'PayMongo request failed.';
         throw new RuntimeException($message);
     }
     
     return $data;
+}
+
+/**
+ * Maps any system order status string to customer tracking flow stages.
+ * Stages: ['Order Placed', 'Preparing', 'Out for Delivery', 'Delivered']
+ */
+function map_order_status_to_tracking(?string $rawStatus): array
+{
+    $clean = trim((string) $rawStatus);
+    $lower = strtolower($clean);
+
+    // Cancelled / Rejected
+    if (in_array($lower, ['cancelled', 'canceled', 'rejected'], true)) {
+        return [
+            'stage'        => 'Cancelled',
+            'index'        => -1,
+            'is_cancelled' => true,
+            'raw_status'   => $clean ?: 'Cancelled',
+            'status_label' => 'Cancelled',
+            'badge_class'  => 'badge-cancelled',
+        ];
+    }
+
+    // Delivered / Completed
+    if (in_array($lower, ['delivered', 'completed'], true)) {
+        return [
+            'stage'        => 'Delivered',
+            'index'        => 3,
+            'is_cancelled' => false,
+            'raw_status'   => $clean ?: 'Delivered',
+            'status_label' => ($lower === 'completed') ? 'Completed' : 'Delivered',
+            'badge_class'  => 'badge-completed',
+        ];
+    }
+
+    // Out for Delivery / In Transit / Dispatched
+    if (in_array($lower, ['out for delivery', 'out_for_delivery', 'in transit', 'on the way', 'dispatched'], true)) {
+        return [
+            'stage'        => 'Out for Delivery',
+            'index'        => 2,
+            'is_cancelled' => false,
+            'raw_status'   => $clean ?: 'Out for Delivery',
+            'status_label' => 'Out for Delivery',
+            'badge_class'  => 'badge-delivery',
+        ];
+    }
+
+    // Preparing / Ready / Processing / In Kitchen
+    if (in_array($lower, ['preparing', 'ready', 'processing', 'in kitchen', 'cooking'], true)) {
+        return [
+            'stage'        => 'Preparing',
+            'index'        => 1,
+            'is_cancelled' => false,
+            'raw_status'   => $clean ?: 'Preparing',
+            'status_label' => ($lower === 'ready') ? 'Ready' : 'Preparing',
+            'badge_class'  => 'badge-preparing',
+        ];
+    }
+
+    // Order Placed / Confirmed / Pending / For Verification / Awaiting Payment
+    return [
+        'stage'        => 'Order Placed',
+        'index'        => 0,
+        'is_cancelled' => false,
+        'raw_status'   => $clean ?: 'Order Placed',
+        'status_label' => $clean ?: 'Order Placed',
+        'badge_class'  => 'badge-placed',
+    ];
 }

@@ -702,6 +702,8 @@ function initMobileMenu() {
   const mainNav = document.getElementById("main-nav");
   const navOverlay = document.getElementById("nav-overlay");
 
+  const siteHeader = navToggle ? navToggle.closest(".site-header") : null;
+
   if (!navToggle || !mainNav) return;
   if (navToggle.dataset.menuInitialized === "true") return;
   navToggle.dataset.menuInitialized = "true";
@@ -710,14 +712,17 @@ function initMobileMenu() {
     navToggle.classList.add("is-active");
     mainNav.classList.add("is-active");
     if (navOverlay) navOverlay.classList.add("is-active");
+    if (siteHeader) siteHeader.classList.add("is-menu-open");
+    document.body.classList.add("mobile-menu-open");
     navToggle.setAttribute("aria-expanded", "true");
-    document.body.style.overflow = "hidden";
   }
 
   function closeMenu() {
     navToggle.classList.remove("is-active");
     mainNav.classList.remove("is-active");
     if (navOverlay) navOverlay.classList.remove("is-active");
+    if (siteHeader) siteHeader.classList.remove("is-menu-open");
+    document.body.classList.remove("mobile-menu-open");
     navToggle.setAttribute("aria-expanded", "false");
     document.body.style.overflow = "";
   }
