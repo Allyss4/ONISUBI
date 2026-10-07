@@ -281,12 +281,31 @@ $currentIndex = $currentTracking ? $currentTracking['index'] : -1;
                   </div>
                 </div>
                   
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <div class="order-card-actions" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                   <?php if (!$isCurrentlyTracked): ?>
                     <a class="secondary-btn" href="account.php?track_id=<?= (int) $order['id'] ?>#order-tracking-panel" style="font-size: 0.85rem; padding: 7px 14px;">Track Status</a>
                   <?php endif; ?>
                   <a class="secondary-btn" href="order-status.php?id=<?= (int) $order['id'] ?>" style="font-size: 0.85rem; padding: 7px 14px;">View receipt</a>
+                  <?php if ($orderTrack['stage'] === 'Delivered'): ?>
+                    <a class="secondary-btn order-feedback-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSf9Hs0l2NOYnmvjf_OM_8LWLOTRCcuezd4UWxwGSJInlHb1eQ" target="_blank" rel="noopener noreferrer" style="font-size: 0.85rem; padding: 7px 14px; background: rgba(42, 157, 143, 0.12); color: #2a9d8f; border-color: rgba(42, 157, 143, 0.4); font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                      <span>Feedback Form</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </a>
+                  <?php endif; ?>
                 </div>
+
+                <?php if ($orderTrack['stage'] === 'Delivered'): ?>
+                  <div class="order-delivered-notice" style="margin-top: 14px; padding: 12px 16px; background: rgba(42, 157, 143, 0.08); border: 1px solid rgba(42, 157, 143, 0.25); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-size: 1.15rem;">🎉</span>
+                      <div>
+                        <strong style="display: block; font-size: 0.88rem; color: #1e3a2f;">Order Delivered!</strong>
+                        <span style="font-size: 0.8rem; color: #4a5568;">We hope you enjoyed your meal! Help us improve with your feedback.</span>
+                      </div>
+                    </div>
+                    <a class="btn btn-primary" href="https://docs.google.com/forms/d/e/1FAIpQLSf9Hs0l2NOYnmvjf_OM_8LWLOTRCcuezd4UWxwGSJInlHb1eQ" target="_blank" rel="noopener noreferrer" style="font-size: 0.82rem; padding: 7px 16px; background: #2a9d8f; border-color: #2a9d8f; text-decoration: none; white-space: nowrap;">Rate &amp; Review</a>
+                  </div>
+                <?php endif; ?>
               </div>
             <?php endforeach; ?>
           </div>
@@ -484,6 +503,33 @@ $currentIndex = $currentTracking ? $currentTracking['index'] : -1;
               const card = document.getElementById(`order-card-${o.id}`);
               if (card) {
                 card.setAttribute('data-order-stage', stage);
+
+                const actions = card.querySelector('.order-card-actions');
+                let fbBtn = card.querySelector('.order-feedback-btn');
+                let fbNotice = card.querySelector('.order-delivered-notice');
+
+                if (stage === 'Delivered') {
+                  if (!fbBtn && actions) {
+                    const btn = document.createElement('a');
+                    btn.className = 'secondary-btn order-feedback-btn';
+                    btn.href = 'https://docs.google.com/forms/d/e/1FAIpQLSf9Hs0l2NOYnmvjf_OM_8LWLOTRCcuezd4UWxwGSJInlHb1eQ';
+                    btn.target = '_blank';
+                    btn.rel = 'noopener noreferrer';
+                    btn.style.cssText = 'font-size: 0.85rem; padding: 7px 14px; background: rgba(42, 157, 143, 0.12); color: #2a9d8f; border-color: rgba(42, 157, 143, 0.4); font-weight: 600; display: inline-flex; align-items: center; gap: 6px;';
+                    btn.innerHTML = '<span>Feedback Form</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>';
+                    actions.appendChild(btn);
+                  }
+                  if (!fbNotice) {
+                    const notice = document.createElement('div');
+                    notice.className = 'order-delivered-notice';
+                    notice.style.cssText = 'margin-top: 14px; padding: 12px 16px; background: rgba(42, 157, 143, 0.08); border: 1px solid rgba(42, 157, 143, 0.25); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;';
+                    notice.innerHTML = '<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 1.15rem;">🎉</span><div><strong style="display: block; font-size: 0.88rem; color: #1e3a2f;">Order Delivered!</strong><span style="font-size: 0.8rem; color: #4a5568;">We hope you enjoyed your meal! Help us improve with your feedback.</span></div></div><a class="btn btn-primary" href="https://docs.google.com/forms/d/e/1FAIpQLSf9Hs0l2NOYnmvjf_OM_8LWLOTRCcuezd4UWxwGSJInlHb1eQ" target="_blank" rel="noopener noreferrer" style="font-size: 0.82rem; padding: 7px 16px; background: #2a9d8f; border-color: #2a9d8f; text-decoration: none; white-space: nowrap;">Rate &amp; Review</a>';
+                    card.appendChild(notice);
+                  }
+                } else {
+                  if (fbBtn) fbBtn.remove();
+                  if (fbNotice) fbNotice.remove();
+                }
               }
             });
 

@@ -710,7 +710,8 @@ select {
     font-size: 0.95rem;
 }
 
-.newsletter-form .btn {
+.newsletter-form .btn,
+.newsletter-action .btn {
     flex-shrink: 0;
     white-space: nowrap;
 }
@@ -1064,7 +1065,8 @@ select {
         font-size: 0.95rem;
     }
 
-    .newsletter-form .btn {
+    .newsletter-form .btn,
+    .newsletter-action .btn {
         width: 100%;
         min-width: 0;
         box-sizing: border-box;

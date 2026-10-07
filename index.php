@@ -368,10 +368,9 @@ function getProductExtraDetails(array $product, array $map): array {
           <span class="eyebrow">Customer feedback</span>
           <h2>Tell us what you think of ONISUBI</h2>
         </div>
-        <form class="newsletter-form">
-          <input type="text" maxlength="500" placeholder="Share your feedback with us" aria-label="Your feedback" required>
-          <button type="submit" class="btn btn-primary">Send feedback</button>
-        </form>
+        <div class="newsletter-action">
+          <a href="https://forms.gle/CiJ8PqYGKoVEVTUX9" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Send feedback</a>
+        </div>
       </div>
     </section>
   </main>
@@ -561,27 +560,6 @@ function getProductExtraDetails(array $product, array $map): array {
     </div>
   </div>
 
-  <script>
-    // Feedback form. Placed before script.js on purpose, so stopImmediatePropagation()
-    // blocks script.js's old "Thanks for subscribing!" handler on the same form.
-    (function () {
-      var form = document.querySelector('#feedback .newsletter-form');
-      if (!form) return;
-      form.addEventListener('submit', function (event) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        var button = form.querySelector('button[type="submit"]');
-        var original = button.textContent;
-        button.textContent = 'Thank you! ✓';
-        button.disabled = true;
-        form.reset();
-        setTimeout(function () {
-          button.textContent = original;
-          button.disabled = false;
-        }, 2500);
-      });
-    })();
-  </script>
   <script>
     function openLoginModal() {
       var modal = document.getElementById('login-prompt-modal');
