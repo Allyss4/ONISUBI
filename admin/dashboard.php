@@ -33,6 +33,8 @@ $lowStockProducts = array_filter($allInventory, function ($p) {
 });
 $lowStockProducts = array_slice($lowStockProducts, 0, 5);
 
+// Favicon configuration for admin dashboard
+$pageFavicon = 'assets/images/Onisubi_Logo.png';
 require __DIR__ . '/_header.php';
 ?>
 <div class="title">

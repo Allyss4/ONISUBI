@@ -13,6 +13,7 @@ $adminNavigation = [
     'reports'   => ['Customer Reviews', 'reports.php'],
     'payment'   => ['Payment Settings', 'payment-settings.php'],
 ];
+$pageFavicon = $pageFavicon ?? 'assets/images/Onisubi_Logo.png';
 ?>
 <!doctype html>
 <html lang="en">
@@ -20,8 +21,10 @@ $adminNavigation = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ONISUBI Admin — <?= admin_escape(ucfirst($activePage)) ?></title>
+    <link rel="icon" type="image/png" href="<?= admin_escape($pageFavicon) ?>">
+    <link rel="shortcut icon" type="image/png" href="<?= admin_escape($pageFavicon) ?>">
+    <link rel="apple-touch-icon" href="<?= admin_escape($pageFavicon) ?>">
     <link rel="icon" type="image/png" href="../assets/images/Onisubi_Logo.png">
-    <link rel="apple-touch-icon" href="../assets/images/Onisubi_Logo.png">
     <link rel="stylesheet" href="assets/admin-ui.css">
 </head>
 <body>
