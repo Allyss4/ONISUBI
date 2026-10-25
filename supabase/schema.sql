@@ -559,6 +559,36 @@ $$;
 ALTER FUNCTION "public"."get_admin_staff"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_customer_feedback"("p_limit" integer DEFAULT 50, "p_offset" integer DEFAULT 0) RETURNS TABLE("id" bigint, "submitted_at" timestamp with time zone, "respondent_type" "text", "portion_size" "text", "favorite_flavor" "text", "price_fairness" "text", "website_issues" "text", "suggested_flavor" "text", "suggested_offer" "text", "loved_most" "text", "comments" "text", "rating_taste" integer, "rating_portion" integer, "rating_price" integer, "rating_overall" integer, "average_rating" numeric, "created_at" timestamp with time zone)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+    SELECT
+        id,
+        submitted_at,
+        respondent_type::text,
+        portion_size::text,
+        favorite_flavor::text,
+        price_fairness::text,
+        website_issues::text,
+        suggested_flavor::text,
+        suggested_offer::text,
+        loved_most::text,
+        comments::text,
+        rating_taste::integer,
+        rating_portion::integer,
+        rating_price::integer,
+        rating_overall::integer,
+        average_rating,
+        created_at
+    FROM public.customer_feedback
+    ORDER BY submitted_at DESC, id DESC
+    LIMIT p_limit OFFSET p_offset;
+$$;
+
+
+ALTER FUNCTION "public"."get_customer_feedback"("p_limit" integer, "p_offset" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_payment_settings"() RETURNS TABLE("id" bigint, "gcash_name" "text", "gcash_number" "text", "gcash_qr" "text", "gcash_enabled" boolean, "cash_enabled" boolean, "updated_at" timestamp with time zone)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
@@ -890,6 +920,45 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 
+CREATE TABLE IF NOT EXISTS "public"."customer_feedback" (
+    "id" bigint NOT NULL,
+    "submitted_at" timestamp with time zone NOT NULL,
+    "respondent_type" character varying(50) NOT NULL,
+    "portion_size" character varying(50),
+    "favorite_flavor" character varying(100),
+    "price_fairness" character varying(100),
+    "website_issues" "text",
+    "suggested_flavor" character varying(100),
+    "suggested_offer" "text",
+    "loved_most" "text",
+    "comments" "text",
+    "rating_taste" smallint,
+    "rating_portion" smallint,
+    "rating_price" smallint,
+    "rating_overall" smallint,
+    "average_rating" numeric(3,2),
+    "created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "customer_feedback_rating_overall_check" CHECK ((("rating_overall" >= 1) AND ("rating_overall" <= 5))),
+    CONSTRAINT "customer_feedback_rating_portion_check" CHECK ((("rating_portion" >= 1) AND ("rating_portion" <= 5))),
+    CONSTRAINT "customer_feedback_rating_price_check" CHECK ((("rating_price" >= 1) AND ("rating_price" <= 5))),
+    CONSTRAINT "customer_feedback_rating_taste_check" CHECK ((("rating_taste" >= 1) AND ("rating_taste" <= 5)))
+);
+
+
+ALTER TABLE "public"."customer_feedback" OWNER TO "postgres";
+
+
+ALTER TABLE "public"."customer_feedback" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME "public"."customer_feedback_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."inventory" (
     "id" bigint NOT NULL,
     "product_id" bigint NOT NULL,
@@ -1093,6 +1162,11 @@ ALTER TABLE "public"."users" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENTITY 
 
 
 
+ALTER TABLE ONLY "public"."customer_feedback"
+    ADD CONSTRAINT "customer_feedback_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."inventory"
     ADD CONSTRAINT "inventory_pkey" PRIMARY KEY ("id");
 
@@ -1210,6 +1284,17 @@ ALTER TABLE ONLY "public"."reviews"
 ALTER TABLE ONLY "public"."reviews"
     ADD CONSTRAINT "reviews_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE SET NULL;
 
+
+
+CREATE POLICY "Allow insert access to anon and authenticated" ON "public"."customer_feedback" FOR INSERT WITH CHECK (true);
+
+
+
+CREATE POLICY "Allow read access to all" ON "public"."customer_feedback" FOR SELECT USING (true);
+
+
+
+ALTER TABLE "public"."customer_feedback" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."inventory" ENABLE ROW LEVEL SECURITY;
@@ -1497,6 +1582,12 @@ GRANT ALL ON FUNCTION "public"."get_admin_staff"() TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."get_customer_feedback"("p_limit" integer, "p_offset" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_customer_feedback"("p_limit" integer, "p_offset" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_customer_feedback"("p_limit" integer, "p_offset" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_payment_settings"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_payment_settings"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_payment_settings"() TO "service_role";
@@ -1587,6 +1678,18 @@ GRANT ALL ON FUNCTION "public"."upsert_product"("p_id" bigint, "p_name" "text", 
 
 
 
+
+
+
+GRANT ALL ON TABLE "public"."customer_feedback" TO "anon";
+GRANT ALL ON TABLE "public"."customer_feedback" TO "authenticated";
+GRANT ALL ON TABLE "public"."customer_feedback" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."customer_feedback_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."customer_feedback_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."customer_feedback_id_seq" TO "service_role";
 
 
 
