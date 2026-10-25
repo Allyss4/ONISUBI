@@ -143,7 +143,7 @@ function getProductExtraDetails(array $product, array $map): array {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20260913c">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261025a">
 </head>
 
 <body>
@@ -436,7 +436,7 @@ function getProductExtraDetails(array $product, array $map): array {
         </div>
 
         <!-- Step 2 (Login) -->
-        <div class="auth-step-login" hidden>
+        <div class="auth-step-login" hidden style="display: none;">
           <input type="hidden" name="action" value="login" disabled>
           <input type="hidden" name="redirect" value="index.php">
           <input type="hidden" name="email" class="auth-email-hidden" disabled>
@@ -457,7 +457,7 @@ function getProductExtraDetails(array $product, array $map): array {
         </div>
 
         <!-- Step 2 (Register) -->
-        <div class="auth-step-register" hidden>
+        <div class="auth-step-register" hidden style="display: none;">
           <input type="hidden" name="action" value="register" disabled>
           <input type="hidden" name="redirect" value="index.php">
           <input type="hidden" name="email" class="auth-email-hidden" disabled>
@@ -563,7 +563,24 @@ function getProductExtraDetails(array $product, array $map): array {
   <script>
     function openLoginModal() {
       var modal = document.getElementById('login-prompt-modal');
-      if (modal) modal.hidden = false;
+      if (!modal) return;
+      var form = modal.querySelector('.magic-auth-form');
+      if (form && typeof form.resetMagicAuth === 'function') {
+        form.resetMagicAuth();
+      } else {
+        var s1 = modal.querySelector('.auth-step-1');
+        var sL = modal.querySelector('.auth-step-login');
+        var sR = modal.querySelector('.auth-step-register');
+        if (s1) { s1.hidden = false; s1.style.display = ''; }
+        if (sL) { sL.hidden = true; sL.style.display = 'none'; }
+        if (sR) { sR.hidden = true; sR.style.display = 'none'; }
+      }
+      var emailInput = modal.querySelector('.auth-email-input');
+      if (emailInput) {
+        emailInput.value = '';
+        setTimeout(function () { emailInput.focus(); }, 60);
+      }
+      modal.hidden = false;
     }
     (function () {
       var modal = document.getElementById('login-prompt-modal');
@@ -577,7 +594,7 @@ function getProductExtraDetails(array $product, array $map): array {
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <?= supabase_frontend_config_tag() ?>
-  <script src="assets/js/script.js?v=20261007"></script>
+  <script src="assets/js/script.js?v=20261025a"></script>
 </body>
 
 </html>

@@ -562,6 +562,67 @@ function initMagicAuth() {
     const emailDisplays = form.querySelectorAll(".auth-email-display");
     const emailHiddens = form.querySelectorAll(".auth-email-hidden");
 
+    function resetToStep1() {
+      if (stepLogin) {
+        stepLogin.hidden = true;
+        stepLogin.style.display = "none";
+        stepLogin
+          .querySelectorAll("input, button, textarea")
+          .forEach((el) => {
+            if (el.type !== "hidden" || el.name === "action") el.disabled = true;
+          });
+        const loginPass = stepLogin.querySelector('input[name="password"]');
+        if (loginPass) {
+          loginPass.value = "";
+          setFieldState(loginPass, "idle");
+        }
+      }
+
+      if (stepRegister) {
+        stepRegister.hidden = true;
+        stepRegister.style.display = "none";
+        stepRegister
+          .querySelectorAll("input, button, textarea")
+          .forEach((el) => {
+            if (el.type !== "hidden" || el.name === "action") el.disabled = true;
+          });
+        stepRegister
+          .querySelectorAll("input, textarea")
+          .forEach((el) => {
+            if (el.type !== "hidden") {
+              el.value = "";
+              setFieldState(el, "idle");
+            }
+          });
+      }
+
+      if (step1) {
+        step1.hidden = false;
+        step1.style.display = "";
+      }
+
+      if (continueBtn) {
+        continueBtn.disabled = false;
+        continueBtn.textContent = "Continue";
+      }
+
+      const modalDialog = form.closest(".confirm-modal, .auth-modal-dialog");
+      if (modalDialog) {
+        const title = modalDialog.querySelector("#login-prompt-title");
+        if (title) title.textContent = "Enter your email to continue";
+        const eyebrow = modalDialog.querySelector(".eyebrow");
+        if (eyebrow) eyebrow.textContent = "Welcome";
+      }
+
+      if (emailInput) {
+        setFieldState(emailInput, "idle");
+      }
+    }
+
+    form.resetMagicAuth = resetToStep1;
+    // Guarantee stepRegister and stepLogin are hidden initially
+    resetToStep1();
+
     if (stepRegister) {
       const phoneInput = stepRegister.querySelector('input[name="phone"]');
       const passInput = stepRegister.querySelector('input[name="password"]');
@@ -627,6 +688,7 @@ function initMagicAuth() {
         const data = await res.json();
 
         step1.hidden = true;
+        step1.style.display = "none";
 
         emailDisplays.forEach((el) => (el.textContent = email));
         emailHiddens.forEach((el) => {
@@ -635,17 +697,76 @@ function initMagicAuth() {
         });
 
         if (data.exists) {
-          stepLogin.hidden = false;
-          stepLogin
-            .querySelectorAll("input, button, textarea")
-            .forEach((el) => (el.disabled = false));
-          stepLogin.querySelector('input[name="action"]').disabled = false;
+          // Account exists: keep registration hidden, reveal login form
+          if (stepRegister) {
+            stepRegister.hidden = true;
+            stepRegister.style.display = "none";
+            stepRegister
+              .querySelectorAll("input, button, textarea")
+              .forEach((el) => {
+                if (el.type !== "hidden" || el.name === "action") el.disabled = true;
+              });
+            const regAction = stepRegister.querySelector('input[name="action"]');
+            if (regAction) regAction.disabled = true;
+          }
+
+          if (stepLogin) {
+            stepLogin.hidden = false;
+            stepLogin.style.display = "";
+            stepLogin
+              .querySelectorAll("input, button, textarea")
+              .forEach((el) => (el.disabled = false));
+            const loginAction = stepLogin.querySelector('input[name="action"]');
+            if (loginAction) loginAction.disabled = false;
+            const passInput = stepLogin.querySelector('input[name="password"]');
+            if (passInput) {
+              passInput.value = "";
+              setTimeout(() => passInput.focus(), 50);
+            }
+          }
+
+          const modalDialog = form.closest(".confirm-modal, .auth-modal-dialog");
+          if (modalDialog) {
+            const title = modalDialog.querySelector("#login-prompt-title");
+            if (title) title.textContent = "Enter your password to log in";
+            const eyebrow = modalDialog.querySelector(".eyebrow");
+            if (eyebrow) eyebrow.textContent = "Welcome Back";
+          }
         } else {
-          stepRegister.hidden = false;
-          stepRegister
-            .querySelectorAll("input, button, textarea")
-            .forEach((el) => (el.disabled = false));
-          stepRegister.querySelector('input[name="action"]').disabled = false;
+          // Account does not exist: keep login hidden, reveal registration form
+          if (stepLogin) {
+            stepLogin.hidden = true;
+            stepLogin.style.display = "none";
+            stepLogin
+              .querySelectorAll("input, button, textarea")
+              .forEach((el) => {
+                if (el.type !== "hidden" || el.name === "action") el.disabled = true;
+              });
+            const loginAction = stepLogin.querySelector('input[name="action"]');
+            if (loginAction) loginAction.disabled = true;
+          }
+
+          if (stepRegister) {
+            stepRegister.hidden = false;
+            stepRegister.style.display = "";
+            stepRegister
+              .querySelectorAll("input, button, textarea")
+              .forEach((el) => (el.disabled = false));
+            const regAction = stepRegister.querySelector('input[name="action"]');
+            if (regAction) regAction.disabled = false;
+            const nameInput = stepRegister.querySelector('input[name="name"]');
+            if (nameInput) {
+              setTimeout(() => nameInput.focus(), 50);
+            }
+          }
+
+          const modalDialog = form.closest(".confirm-modal, .auth-modal-dialog");
+          if (modalDialog) {
+            const title = modalDialog.querySelector("#login-prompt-title");
+            if (title) title.textContent = "Create your account";
+            const eyebrow = modalDialog.querySelector(".eyebrow");
+            if (eyebrow) eyebrow.textContent = "New to ONISUBI?";
+          }
         }
       } catch (err) {
         alert("Something went wrong. Please try again.");
@@ -667,25 +788,9 @@ function initMagicAuth() {
 
     backBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (stepLogin) stepLogin.hidden = true;
-        if (stepRegister) stepRegister.hidden = true;
-        if (step1) step1.hidden = false;
-
-        if (stepLogin)
-          stepLogin
-            .querySelectorAll('input:not([type="hidden"]), button, textarea')
-            .forEach((el) => (el.disabled = true));
-        if (stepRegister)
-          stepRegister
-            .querySelectorAll('input:not([type="hidden"]), button, textarea')
-            .forEach((el) => (el.disabled = true));
-        if (stepLogin) {
-          const a = stepLogin.querySelector('input[name="action"]');
-          if (a) a.disabled = true;
-        }
-        if (stepRegister) {
-          const a = stepRegister.querySelector('input[name="action"]');
-          if (a) a.disabled = true;
+        resetToStep1();
+        if (emailInput) {
+          setTimeout(() => emailInput.focus(), 50);
         }
       });
     });
