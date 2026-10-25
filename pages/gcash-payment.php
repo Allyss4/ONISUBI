@@ -30,6 +30,8 @@ function h(string $value): string { return htmlspecialchars($value, ENT_QUOTES, 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pay with GCash | ONISUBI</title>
+  <link rel="icon" type="image/png" href="../assets/images/Onisubi_Logo.png">
+  <link rel="apple-touch-icon" href="../assets/images/Onisubi_Logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">

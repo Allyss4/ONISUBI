@@ -197,6 +197,8 @@ function getProductExtraDetails(array $product, array $map): array {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ONISUBI | Rice Snack & Musubi</title>
+  <link rel="icon" type="image/png" href="assets/images/Onisubi_Logo.png">
+  <link rel="apple-touch-icon" href="assets/images/Onisubi_Logo.png">
   <meta name="description" content="ONISUBI brings together Japanese onigiri and Hawaiian musubi in a delicious, budget-friendly snack.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

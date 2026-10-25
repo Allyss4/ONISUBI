@@ -20,6 +20,8 @@ $adminNavigation = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ONISUBI Admin — <?= admin_escape(ucfirst($activePage)) ?></title>
+    <link rel="icon" type="image/png" href="../assets/images/Onisubi_Logo.png">
+    <link rel="apple-touch-icon" href="../assets/images/Onisubi_Logo.png">
     <link rel="stylesheet" href="assets/admin-ui.css">
 </head>
 <body>
