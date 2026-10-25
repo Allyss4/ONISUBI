@@ -961,6 +961,16 @@ function initProductDetailModal() {
     if (modalBasePrice) modalBasePrice.textContent = formatPeso(data.price || 40);
     if (modalDesc) modalDesc.textContent = data.description || '';
 
+    const modalRatingEl = modal.querySelector('.product-modal-rating');
+    if (modalRatingEl) {
+      const r = Number(data.rating || 5.0).toFixed(1);
+      const count = Number(data.review_count || 0);
+      const rounded = Math.round(Number(r));
+      const stars = '★'.repeat(Math.max(1, Math.min(5, rounded))) + '☆'.repeat(Math.max(0, 5 - Math.max(1, Math.min(5, rounded))));
+      const countLabel = count > 0 ? `(${count} review${count === 1 ? '' : 's'})` : '(New)';
+      modalRatingEl.innerHTML = `${stars} <span>${r} ${countLabel}</span>`;
+    }
+
     // Ingredients Chips
     if (modalIngredients) {
       modalIngredients.innerHTML = '';
@@ -1307,9 +1317,159 @@ function initRealtimeInventorySync() {
     });
 }
 
+function initFeedbackModal() {
+  const modal = document.getElementById('feedback-modal');
+  if (!modal) return;
+
+  const form = document.getElementById('feedback-form');
+  const starPicker = document.getElementById('feedback-star-picker');
+  const ratingInput = document.getElementById('feedback-rating-input');
+  const statusMsg = document.getElementById('feedback-status');
+  const submitBtn = document.getElementById('feedback-submit-btn');
+
+  // Handle star picker interactions
+  if (starPicker && ratingInput) {
+    const stars = starPicker.querySelectorAll('span');
+    const updateStars = (val) => {
+      stars.forEach((s) => {
+        const starVal = Number(s.dataset.star || 1);
+        s.classList.toggle('is-active', starVal <= val);
+        s.setAttribute('aria-checked', starVal === val ? 'true' : 'false');
+      });
+    };
+
+    stars.forEach((star) => {
+      star.addEventListener('click', () => {
+        const val = Number(star.dataset.star || 5);
+        ratingInput.value = val;
+        updateStars(val);
+      });
+
+      star.addEventListener('mouseenter', () => {
+        const val = Number(star.dataset.star || 5);
+        stars.forEach((s) => {
+          const sVal = Number(s.dataset.star || 1);
+          s.classList.toggle('is-hovered', sVal <= val);
+        });
+      });
+
+      star.addEventListener('mouseleave', () => {
+        stars.forEach((s) => s.classList.remove('is-hovered'));
+      });
+
+      star.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const val = Number(star.dataset.star || 5);
+          ratingInput.value = val;
+          updateStars(val);
+        }
+      });
+    });
+  }
+
+  // Handle form submission
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (statusMsg) {
+        statusMsg.className = 'feedback-status-msg';
+        statusMsg.textContent = '';
+      }
+
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(formData.entries());
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+      }
+
+      try {
+        const res = await fetch(BASE_PATH + 'api/submit-feedback.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          if (statusMsg) {
+            statusMsg.classList.add('is-success');
+            statusMsg.textContent = data.message || 'Thank you! Your feedback has been recorded.';
+          }
+          form.reset();
+          if (ratingInput) ratingInput.value = '5';
+          if (starPicker) {
+            starPicker.querySelectorAll('span').forEach((s) => s.classList.add('is-active'));
+          }
+
+          setTimeout(() => {
+            closeFeedbackModal();
+            window.location.reload();
+          }, 1400);
+        } else {
+          if (statusMsg) {
+            statusMsg.classList.add('is-error');
+            statusMsg.textContent = data.error || 'Failed to submit feedback. Please try again.';
+          }
+        }
+      } catch (err) {
+        if (statusMsg) {
+          statusMsg.classList.add('is-error');
+          statusMsg.textContent = 'Network error: could not submit feedback.';
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Feedback & Review';
+        }
+      }
+    });
+  }
+
+  // Modal backdrop click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeFeedbackModal();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden) {
+      closeFeedbackModal();
+    }
+  });
+}
+
+function openFeedbackModal() {
+  const modal = document.getElementById('feedback-modal');
+  if (!modal) return;
+  const statusMsg = document.getElementById('feedback-status');
+  if (statusMsg) {
+    statusMsg.className = 'feedback-status-msg';
+    statusMsg.textContent = '';
+  }
+  modal.hidden = false;
+  document.body.classList.add('modal-open');
+}
+
+function closeFeedbackModal() {
+  const modal = document.getElementById('feedback-modal');
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove('modal-open');
+}
+
+window.openFeedbackModal = openFeedbackModal;
+window.closeFeedbackModal = closeFeedbackModal;
+
 function initApp() {
   initMobileMenu();
   initProductDetailModal();
+  initFeedbackModal();
   initRealtimeInventorySync();
 
   if (!window.PRODUCT_STOCKS || Object.keys(window.PRODUCT_STOCKS).length === 0) {

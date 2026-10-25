@@ -35,6 +35,64 @@ if (isset($conn) && $conn instanceof PDO) {
   }
 }
 
+$productRatings = [];
+$siteRating = 4.9;
+$siteReviewCount = 0;
+$featuredReviews = [];
+
+if (isset($conn) && $conn instanceof PDO) {
+  try {
+    $rateStmt = $conn->query("
+      SELECT product_id, 
+             ROUND(AVG(rating), 1) AS avg_rating,
+             COUNT(*) AS review_count
+      FROM reviews
+      WHERE product_id IS NOT NULL
+      GROUP BY product_id
+    ");
+    while ($row = $rateStmt->fetch(PDO::FETCH_ASSOC)) {
+      $productRatings[(int) $row['product_id']] = [
+        'rating' => (float) $row['avg_rating'],
+        'count'  => (int) $row['review_count'],
+      ];
+    }
+
+    $overallStmt = $conn->query("
+      SELECT ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS total_count 
+      FROM reviews
+    ");
+    $overallRow = $overallStmt->fetch(PDO::FETCH_ASSOC);
+    if ($overallRow && (int) ($overallRow['total_count'] ?? 0) > 0) {
+      $siteRating = (float) $overallRow['avg_rating'];
+      $siteReviewCount = (int) $overallRow['total_count'];
+    }
+
+    $revQuery = $conn->query("
+      SELECT r.id, r.rating, r.comment, r.customer_name, r.created_at, p.name AS product_name
+      FROM reviews r
+      LEFT JOIN products p ON p.id = r.product_id
+      WHERE r.rating >= 4
+      ORDER BY r.created_at DESC
+      LIMIT 12
+    ");
+    $featuredReviews = $revQuery->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  } catch (Throwable $e) {
+    // Keep defaults
+  }
+}
+
+$carouselItems = [];
+if (!empty($featuredReviews)) {
+  $filtered = array_values(array_filter($featuredReviews, fn($r) => (int) ($r['rating'] ?? 0) >= 4));
+  if (!empty($filtered)) {
+    $sequence = $filtered;
+    while (count($sequence) < 6) {
+      $sequence = array_merge($sequence, $filtered);
+    }
+    $carouselItems = array_merge($sequence, $sequence);
+  }
+}
+
 if (empty($products)) {
   $products = [
     ['id' => 1, 'name' => 'Spam & Egg', 'price' => 40, 'description' => 'Savory spam and fluffy egg.', 'image' => 'https://balancewithjess.com/wp-content/uploads/2022/02/Spam-Musubi-with-Egg-Feat-500x500.jpg'],
@@ -143,7 +201,7 @@ function getProductExtraDetails(array $product, array $map): array {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261025a">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261025_carousel">
 </head>
 
 <body>
@@ -157,6 +215,7 @@ function getProductExtraDetails(array $product, array $map): array {
       <nav class="main-nav" id="main-nav" aria-label="Main navigation">
         <a href="#about">About</a>
         <a href="#menu">Menu</a>
+        <a href="#reviews">Reviews</a>
         <a href="#contact">Contact</a>
         <?php if ($isLoggedIn): ?>
           <a class="account-link mobile-only-link" href="pages/account.php">My Account</a>
@@ -250,19 +309,28 @@ function getProductExtraDetails(array $product, array $map): array {
 
         <div class="product-grid">
           <?php foreach ($products as $product):
+            $productId = (int) ($product['id'] ?? 0);
             $stock = (int) ($product['stock'] ?? 0);
             $limit = (int) ($product['low_stock_limit'] ?? 5);
             $isOutOfStock = $stock <= 0;
             $isLowStock = !$isOutOfStock && $stock <= $limit;
 
+            $ratingInfo = $productRatings[$productId] ?? null;
+            $pRating = $ratingInfo ? (float) $ratingInfo['rating'] : 5.0;
+            $pReviewCount = $ratingInfo ? (int) $ratingInfo['count'] : 0;
+            $starsCount = (int) round($pRating);
+            $starDisplay = str_repeat('★', max(1, min(5, $starsCount))) . str_repeat('☆', max(0, 5 - max(1, min(5, $starsCount))));
+
             $extra = getProductExtraDetails($product, $productDetailsMap);
             $fullData = [
-              'id' => (int) ($product['id'] ?? 0),
+              'id' => $productId,
               'name' => (string) ($product['name'] ?? ''),
               'price' => (float) ($product['price'] ?? 40.0),
               'image' => (string) ($product['image'] ?? ''),
               'stock' => $stock,
               'low_stock_limit' => $limit,
+              'rating' => $pRating,
+              'review_count' => $pReviewCount,
               'description' => $extra['full_description'],
               'short_description' => (string) ($product['description'] ?? ''),
               'ingredients' => $extra['ingredients'],
@@ -273,7 +341,7 @@ function getProductExtraDetails(array $product, array $map): array {
           ?>
             <article class="product-card <?= $isOutOfStock ? 'is-out-of-stock' : '' ?>"
                      data-product-card
-                     data-product-id="<?= (int) ($product['id'] ?? 0) ?>"
+                     data-product-id="<?= $productId ?>"
                      data-stock="<?= $stock ?>"
                      data-low-limit="<?= $limit ?>"
                      data-product-json='<?= $jsonData ?>'
@@ -286,7 +354,9 @@ function getProductExtraDetails(array $product, array $map): array {
                 <span class="product-view-hint">View details</span>
               </div>
               <div class="product-info">
-                <div class="rating">★★★★★ <span>4.9</span></div>
+                <div class="rating">
+                  <?= $starDisplay ?> <span><?= number_format($pRating, 1) ?> (<?= $pReviewCount > 0 ? $pReviewCount : 'New' ?>)</span>
+                </div>
                 <h3><?= e((string) ($product['name'] ?? '')) ?></h3>
                 <p><?= e((string) ($product['description'] ?? '')) ?></p>
                 <div class="stock-status-wrap">
@@ -301,7 +371,7 @@ function getProductExtraDetails(array $product, array $map): array {
                 <div class="product-bottom">
                   <strong>₱<?= number_format((float) ($product['price'] ?? 0), 2) ?></strong>
                   <button type="button" class="add-cart" data-add-to-cart
-                    data-product-id="<?= (int) ($product['id'] ?? 0) ?>"
+                    data-product-id="<?= $productId ?>"
                     data-name="<?= e((string) ($product['name'] ?? '')) ?>"
                     data-price="<?= (float) ($product['price'] ?? 0) ?>"
                     data-image="<?= e((string) ($product['image'] ?? '')) ?>"
@@ -362,14 +432,64 @@ function getProductExtraDetails(array $product, array $map): array {
       </div>
     </section>
 
+    <section id="reviews" class="reviews-section section-spacing">
+      <div class="container">
+        <div class="section-heading center">
+          <span class="eyebrow">Customer Reviews</span>
+          <h2>What our customers say</h2>
+          <p class="section-subheading">
+            Rated <strong><?= number_format($siteRating, 1) ?> / 5.0</strong> based on <strong><?= $siteReviewCount ?></strong> customer ratings
+          </p>
+        </div>
+      </div>
+
+      <div class="reviews-carousel-wrapper" aria-label="Customer reviews carousel" role="region">
+        <?php if (!empty($carouselItems)): ?>
+          <div class="reviews-track">
+            <?php foreach ($carouselItems as $rev): 
+              $revRating = max(1, min(5, (int) ($rev['rating'] ?? 5)));
+              $revStars = str_repeat('★', $revRating) . str_repeat('☆', 5 - $revRating);
+              $revAuthor = !empty($rev['customer_name']) ? (string) $rev['customer_name'] : 'Customer';
+              $revInitial = strtoupper(mb_substr($revAuthor, 0, 1));
+              $revDate = !empty($rev['created_at']) ? date('M d, Y', strtotime($rev['created_at'])) : 'Recent';
+            ?>
+              <div class="review-card">
+                <div class="review-card-top">
+                  <div class="review-rating-stars"><?= $revStars ?></div>
+                  <span class="review-date"><?= e($revDate) ?></span>
+                </div>
+                <p class="review-comment">"<?= e((string) ($rev['comment'] ?? '')) ?>"</p>
+                <div class="review-author-wrap">
+                  <div class="review-avatar"><?= e($revInitial) ?></div>
+                  <div class="review-author-info">
+                    <strong><?= e($revAuthor) ?></strong>
+                    <?php if (!empty($rev['product_name'])): ?>
+                      <span class="review-product-tag"><?= e((string) $rev['product_name']) ?></span>
+                    <?php endif; ?>
+                  </div>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="container">
+            <p class="empty-reviews">No reviews submitted yet. Be the first to share your thoughts!</p>
+          </div>
+        <?php endif; ?>
+      </div>
+    </section>
+
     <section id="feedback" class="newsletter-section section-spacing">
       <div class="container newsletter-box">
         <div>
           <span class="eyebrow">Customer feedback</span>
           <h2>Tell us what you think of ONISUBI</h2>
+          <p style="color: var(--muted); margin-top: 6px; max-width: 540px;">
+            Your feedback directly shapes our menu, portion sizes, and service. Help us make ONISUBI even better!
+          </p>
         </div>
         <div class="newsletter-action">
-          <a href="https://forms.gle/CiJ8PqYGKoVEVTUX9" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Send feedback</a>
+          <button type="button" class="btn btn-primary" onclick="openFeedbackModal();">Give Feedback</button>
         </div>
       </div>
     </section>
@@ -493,6 +613,102 @@ function getProductExtraDetails(array $product, array $map): array {
     </section>
   </div>
 
+  <!-- Customer Feedback & Review Modal -->
+  <div id="feedback-modal" class="modal-backdrop" hidden>
+    <section class="confirm-modal feedback-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title" style="max-height: 90vh; overflow-y: auto;">
+      <button class="modal-close" type="button" onclick="closeFeedbackModal();" aria-label="Close">&times;</button>
+      <span class="eyebrow">Feedback & Review</span>
+      <h2 id="feedback-modal-title">Share your ONISUBI experience</h2>
+
+      <div id="feedback-status" class="feedback-status-msg" role="alert"></div>
+
+      <form id="feedback-form" class="checkout-form" style="margin-top: 16px;">
+        <div class="modal-field-group">
+          <label>Your Overall Rating</label>
+          <div class="star-rating-picker" id="feedback-star-picker" role="radiogroup" aria-label="Rating from 1 to 5 stars">
+            <span data-star="1" class="is-active" role="radio" aria-checked="false" tabindex="0">★</span>
+            <span data-star="2" class="is-active" role="radio" aria-checked="false" tabindex="0">★</span>
+            <span data-star="3" class="is-active" role="radio" aria-checked="false" tabindex="0">★</span>
+            <span data-star="4" class="is-active" role="radio" aria-checked="false" tabindex="0">★</span>
+            <span data-star="5" class="is-active" role="radio" aria-checked="true" tabindex="0">★</span>
+          </div>
+          <input type="hidden" name="rating" id="feedback-rating-input" value="5">
+        </div>
+
+        <div class="feedback-grid-2">
+          <div class="modal-field-group">
+            <label for="feedback-respondent-type">I am a...</label>
+            <select id="feedback-respondent-type" name="respondent_type" required>
+              <option value="Student" selected>Student</option>
+              <option value="Professor">Professor</option>
+              <option value="School Staff">School Staff</option>
+              <option value="Visitor">Visitor</option>
+            </select>
+          </div>
+
+          <div class="modal-field-group">
+            <label for="feedback-favorite-flavor">Favorite / Reviewed Flavor</label>
+            <select id="feedback-favorite-flavor" name="favorite_flavor" required>
+              <?php foreach ($products as $p): ?>
+                <option value="<?= e((string) ($p['name'] ?? '')) ?>"><?= e((string) ($p['name'] ?? '')) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="feedback-grid-2">
+          <div class="modal-field-group">
+            <label for="feedback-portion-size">Portion Size</label>
+            <select id="feedback-portion-size" name="portion_size">
+              <option value="Just right" selected>Just right</option>
+              <option value="Too small">Too small</option>
+              <option value="Too big">Too big</option>
+            </select>
+          </div>
+
+          <div class="modal-field-group">
+            <label for="feedback-price-fairness">Is ₱40.00 fair?</label>
+            <select id="feedback-price-fairness" name="price_fairness">
+              <option value="Yes, very affordable">Yes, very affordable</option>
+              <option value="Fair" selected>Fair</option>
+              <option value="A bit expensive">A bit expensive</option>
+              <option value="Very Expensive">Very Expensive</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-field-group">
+          <label for="feedback-loved-most">What did you love most?</label>
+          <input type="text" id="feedback-loved-most" name="loved_most" placeholder="e.g. Crispy nori, savory spam flavor, warm rice...">
+        </div>
+
+        <div class="modal-field-group">
+          <label for="feedback-comments">Comments & Suggestions</label>
+          <textarea id="feedback-comments" name="comments" rows="3" placeholder="Tell us anything else you'd like us to improve or keep doing..."></textarea>
+        </div>
+
+        <div class="feedback-grid-2">
+          <div class="modal-field-group">
+            <label for="feedback-suggested-flavor">New flavors you want?</label>
+            <input type="text" id="feedback-suggested-flavor" name="suggested_flavor" placeholder="e.g. Chicken Teriyaki, Kimchi...">
+          </div>
+
+          <div class="modal-field-group">
+            <label for="feedback-website-issues">Any website bugs/issues?</label>
+            <select id="feedback-website-issues" name="website_issues">
+              <option value="No" selected>No, worked smoothly</option>
+              <option value="Yes">Yes, experienced issues</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" id="feedback-submit-btn" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+          Submit Feedback & Review
+        </button>
+      </form>
+    </section>
+  </div>
+
   <!-- Interactive Product Detail Modal -->
   <div id="product-detail-modal" class="modal-backdrop product-modal-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
     <div class="product-modal-dialog">
@@ -594,7 +810,7 @@ function getProductExtraDetails(array $product, array $map): array {
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <?= supabase_frontend_config_tag() ?>
-  <script src="assets/js/script.js?v=20261025a"></script>
+  <script src="assets/js/script.js?v=20261025_feedback"></script>
 </body>
 
 </html>
